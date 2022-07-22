@@ -14,7 +14,7 @@ __all__ = [
 
 
 class ElectronDistribution:
-    """Base class grouping common functionalities to be used by all electron 
+    """Base class grouping common functionalities to be used by all electron
     distributions. Choose the function to be used for integration. The
     default is :class:`~numpy.trapz`"""
 
@@ -25,7 +25,7 @@ class ElectronDistribution:
     def general_integral(
         self, gamma_low, gamma_up, gamma_power=0, integrator=np.trapz, **kwargs
     ):
-        """integral of the electron distribution over the range gamma_low, 
+        """integral of the electron distribution over the range gamma_low,
         gamma_up for a general set of parameters
 
         Parameters
@@ -47,7 +47,7 @@ class ElectronDistribution:
         return integrator(values, gamma, axis=0)
 
     def integral(self, gamma_low, gamma_up, gamma_power=0):
-        """integral of **this particular** electron distribution over the range 
+        """integral of **this particular** electron distribution over the range
         gamma_low, gamma_up
 
         Parameters
@@ -64,7 +64,7 @@ class ElectronDistribution:
 
     @classmethod
     def from_normalised_density(cls, n_e_tot, **kwargs):
-        r"""sets the normalisation :math:`k_e` from the total particle density 
+        r"""sets the normalisation :math:`k_e` from the total particle density
         :math:`n_{e,\,tot}`"""
         # use gamma_min and gamma_max of the electron distribution as
         # integration limits
@@ -79,7 +79,7 @@ class ElectronDistribution:
 
     @classmethod
     def from_normalised_energy_density(cls, u_e, **kwargs):
-        r"""sets the normalisation :math:`k_e` from the total energy density 
+        r"""sets the normalisation :math:`k_e` from the total energy density
         :math:`u_e`, Eq. 6.64 in [DermerMenon2009]_"""
         # use gamma_min and gamma_max of the electron distribution as
         # integration limits
@@ -108,11 +108,11 @@ class ElectronDistribution:
 
 
 class PowerLaw(ElectronDistribution):
-    r"""Class for power-law particle spectrum. 
+    r"""Class for power-law particle spectrum.
     When called, the particle density :math:`n_e(\gamma)` in :math:`\mathrm{cm}^{-3}` is returned.
 
     .. math::
-        n_e(\gamma') = k_e \, \gamma'^{-p} \, H(\gamma'; \gamma'_{\rm min}, \gamma'_{\rm max}) 
+        n_e(\gamma') = k_e \, \gamma'^{-p} \, H(\gamma'; \gamma'_{\rm min}, \gamma'_{\rm max})
 
     Parameters
     ----------
@@ -188,7 +188,7 @@ class BrokenPowerLaw(ElectronDistribution):
     .. math::
         n_e(\gamma') = k_e \left[
         \left(\frac{\gamma'}{\gamma'_b}\right)^{-p_1} \, H(\gamma'; \gamma'_{\rm min}, \gamma'_b) +
-        \left(\frac{\gamma'}{\gamma'_b}\right)^{-p_2} \, H(\gamma'; \gamma'_{b}, \gamma'_{\rm max}) 
+        \left(\frac{\gamma'}{\gamma'_b}\right)^{-p_2} \, H(\gamma'; \gamma'_{b}, \gamma'_{\rm max})
         \right]
 
     Parameters
@@ -198,9 +198,9 @@ class BrokenPowerLaw(ElectronDistribution):
     p1 : float
         spectral index before the break (positive by definition)
     p2 : float
-        spectral index after the break (positive by definition)   
+        spectral index after the break (positive by definition)
     gamma_b : float
-        Lorentz factor at which the change in spectral index is occurring 
+        Lorentz factor at which the change in spectral index is occurring
     gamma_min : float
         minimum Lorentz factor of the electron distribution
     gamma_max : float
@@ -298,7 +298,7 @@ class LogParabola(ElectronDistribution):
     When called, the particle density :math:`n_e(\gamma)` in :math:`\mathrm{cm}^{-3}` is returned.
 
     .. math::
-        n_e(\gamma') = k_e \, \left(\frac{\gamma'}{\gamma'_0}\right)^{-(p + q \log_{10}(\gamma' / \gamma'_0))}  
+        n_e(\gamma') = k_e \, \left(\frac{\gamma'}{\gamma'_0}\right)^{-(p + q \log_{10}(\gamma' / \gamma'_0))}
 
     Parameters
     ----------
@@ -393,11 +393,11 @@ class LogParabola(ElectronDistribution):
 
 
 class ExpCutoffPowerLaw(ElectronDistribution):
-    r"""Class for power-law with an exponetial cutoff particle spectrum. 
+    r"""Class for power-law with an exponetial cutoff particle spectrum.
     When called, the particle density :math:`n_e(\gamma)` in :math:`\mathrm{cm}^{-3}` is returned.
 
     .. math::
-        n_e(\gamma') = k_e \, \gamma'^{-p} exp(-\gamma'/\gamma_c) \, H(\gamma'; \gamma'_{\rm min}, \gamma'_{\rm max}) 
+        n_e(\gamma') = k_e \, \gamma'^{-p} exp(-\gamma'/\gamma_c) \, H(\gamma'; \gamma'_{\rm min}, \gamma'_{\rm max})
 
     Parameters
     ----------
@@ -473,3 +473,6 @@ class ExpCutoffPowerLaw(ElectronDistribution):
             + f" - gamma_min: {self.gamma_min:.2e}\n"
             + f" - gamma_max: {self.gamma_max:.2e}"
         )
+
+
+class ArbitraryDistribution(ElectronDistribution):
