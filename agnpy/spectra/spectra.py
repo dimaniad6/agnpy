@@ -475,4 +475,4 @@ class ExpCutoffPowerLaw(ElectronDistribution):
         )
 
 
-class ArbitraryDistribution(ElectronDistribution):
+class Arbitrary(ElectronDistribution):
