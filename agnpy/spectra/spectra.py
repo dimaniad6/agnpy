@@ -478,3 +478,4 @@ class ExpCutoffPowerLaw(ElectronDistribution):
 class Arbitrary(ElectronDistribution):
 ########
 ## Newline
+# New test
