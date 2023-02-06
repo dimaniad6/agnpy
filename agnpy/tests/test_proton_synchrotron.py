@@ -72,7 +72,7 @@ class TestProtonSynchrotron:
             "agnpy",
             "Cerruti model",
             "Proton Synchrotron",
-            f"{figures_dir}/proton_synch_comparison_PKS.png",
+            f"{figures_dir}/proton_synch_comparison_Cerruti.png",
             "sed",
             # y_range=[1e-16, 1e-8],
             comparison_range=nu_range.to_value("Hz"),
