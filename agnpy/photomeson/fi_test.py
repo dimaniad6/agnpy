@@ -5,20 +5,17 @@ from scipy.integrate import quad, dblquad, nquad, simps, trapz
 import numpy as np
 import matplotlib.pyplot as plt
 
-p_dist = PL(1 * u.Unit('cm-3'), 2., 1, 2e30)
-
 def dist(x):
-    return p_dist(x).value
     return x**(-2)
 
+min = 1
 int = []
-a = np.logspace(4,10,100)
+a = np.logspace(np.log10(min)+1,30,100)
 k = -1
+
 for i in a:
     k +=1
-    x_range = [1,i]
-    int.append(quad(dist, 1e3, i  )[0])
-
+    int.append(quad(dist, min, i  )[0])
 
 plt.loglog(a, int)
 plt.show()
