@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from astropy.constants import m_p, h, m_e,m_p
 from astropy.coordinates import Distance
 
-#load_mpl_rc()  # adopt agnpy plotting style
-plt.style.use('proton_synchrotron')
+load_mpl_rc()  # adopt agnpy plotting style
+#plt.style.use('proton_synchrotron')
 
 # Define source parameters PKS2155
 B = 80 * u.G
