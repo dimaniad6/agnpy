@@ -217,24 +217,47 @@ class PhotoHadronicInteraction:
             else:
                 gamma_limit = g
 
-            gamma_range = [gamma_limit, 1e13] # Do not change the upper limit
-
             if particle in ('electron', 'antinu_electron'):
                 eta_range = [0.945, 31.3]
             else:
                 eta_range = [0.3443, 31.3]
 
 
-            dNdE = (1 / 4) * (mpc2.value) *  nquad(H_integrand,
+            gamma_max = 1e15
+            dNdE = []
+            a = gamma_limit
+            inv = 1e2
+
+            while a * inv < gamma_max:
+
+                b = inv * a
+                gamma_range = [a,b]
+                
+                dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
                                         [gamma_range, eta_range],
                                         args=[gamma_limit,
                                         particle_distribution,
                                         soft_photon_distribution,
                                         particle]
-                                        )[0]
+                                        )[0])
+                print ('finished this one')
+                b = inv * a
+                a = b
 
-            spectrum_array[i] = dNdE
+            gamma_range = [a,gamma_max]
 
+            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
+                                        [gamma_range, eta_range],
+                                        args=[gamma_limit,
+                                        particle_distribution,
+                                        soft_photon_distribution,
+                                        particle]
+                                        )[0])
+
+
+
+            spectrum_array[i] = sum(dNdE)
+            print (spectrum_array[i])
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
 

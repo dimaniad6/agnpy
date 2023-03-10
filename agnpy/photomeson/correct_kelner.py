@@ -35,7 +35,7 @@ def epsilon_equivalency(nu, m = m_e):
 
 '''
 
-__all__ = ['PhotoHadronicInteraction_Reference']
+__all__ = ['PhotoHadronicInteraction_Reference3']
 
 mpc2 = (m_p * c ** 2).to('eV')
 mec2 = (m_e * c ** 2).to('eV')
@@ -135,23 +135,8 @@ def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist
         phi_gamma(eta, gamma_limit/gamma , particle)
     )
 
-def H_calc(eta, gamma_limit, particle_distribution, soft_photon_dist, max, particle):
 
-    gamma_range = [gamma_limit, max]
-    a = (1 / 4) * (mpc2.value) *  nquad(H_integrand,
-                                [gamma_range],
-                                args=[eta,
-                                gamma_limit,
-                                particle_distribution,
-                                soft_photon_dist,
-                                particle]
-                                )[0]
-    #
-    # if a != 0:
-    #     print (a)
-    return a
-
-class PhotoHadronicInteraction_Reference:
+class PhotoHadronicInteraction_Reference3:
 
     def __init__(self, particle_distribution, soft_photon_distribution):
 
@@ -186,10 +171,10 @@ class PhotoHadronicInteraction_Reference:
             inv = 1e2
 
             while a * inv < gamma_max:
-                # print (gamma_limit)
+                
                 b = inv * a
                 gamma_range = [a,b]
-                print (gamma_range)
+
                 dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
                                             [gamma_range, eta_range],
                                             args=[gamma_limit,
@@ -202,7 +187,7 @@ class PhotoHadronicInteraction_Reference:
 
             gamma_range = [a,gamma_max]
             # print (gamma_range)
-            last = dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
+            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
                                         [gamma_range, eta_range],
                                         args=[gamma_limit,
                                         particle_distribution,
@@ -213,7 +198,6 @@ class PhotoHadronicInteraction_Reference:
 
 
             spectrum_array[i] = sum(dNdE)
-            print (spectrum_array[i])
 
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
@@ -232,7 +216,7 @@ class PhotoHadronicInteraction_Reference:
         if particle not in ('electron', 'positron'):
             input = epsilon_equivalency(input, m = m_p)
 
-        spectrum = PhotoHadronicInteraction_Reference.spectrum_calculator(
+        spectrum = PhotoHadronicInteraction_Reference3.spectrum_calculator(
                 input , particle_distribution, soft_photon_distribution, particle
                 )
 
@@ -248,10 +232,10 @@ class PhotoHadronicInteraction_Reference:
 
 if __name__ == '__main__':
 
-    E, EdNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure14/photon.txt",
+    E, EdNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure15/2photon.txt",
                         dtype = 'float', comments = '#', usecols = (0,1), delimiter=",",unpack = True)
-    E2, E2dNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure14/electron.txt",
-                        dtype = 'float', comments = '#', usecols = (0,1), delimiter=",",unpack = True)
+    # E2, E2dNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure15/electron.txt",
+    #                     dtype = 'float', comments = '#', usecols = (0,1), delimiter=",",unpack = True)
 
     # E = E[0],E[3],E[7],E[11],E[14]
     # EdNdE =EdNdE[0],EdNdE[3],EdNdE[7],EdNdE[11],EdNdE[14]
@@ -259,7 +243,7 @@ if __name__ == '__main__':
     # E2dNdE = E2dNdE[0],E2dNdE[3],E2dNdE[7],E2dNdE[11], E2dNdE[14]
 
     nu_aha = E*u.eV / h.to('eV s')
-    nu_aha2= E2*u.eV/ h.to('eV s')
+    # nu_aha2= E2*u.eV/ h.to('eV s')
 
     def BlackBody(gamma):
         T = 2.7 *u.K
@@ -271,40 +255,6 @@ if __name__ == '__main__':
         denom = np.exp(mpc2.value * gamma / kT) - 1
         return norm * (num / denom)*u.Unit('cm-3')
 
-    #H integral
-    # E_star = 3*1e20 * u.eV
-    # mpc2 = (m_p * c ** 2).to('eV')
-    #
-    # A1 = (0.26506*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    # A2 = (0.24153*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    # A3 = (0.22170*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    # A4 = (0.19054*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    #
-    # # eta = np.linspace(0.3443, 31.13,200)
-    # # gamma_limit = 0.5 * E_star / mpc2
-    # # H_int = []
-    # # p_dist = ECPL(A2, 2. , E_star / mpc2 , 1, 1e20)
-    # # #p_dist = PL(A2, 2., 1e3, 1e20)
-    # # max = 10**(15)
-    # # for i in eta:
-    # #     H_int.append(H_calc(i,gamma_limit, p_dist, BlackBody, max, 'photon'))
-    # #
-    # # plt.loglog(eta/0.313, H_int)
-    # # plt.xlabel('eta / eta0')
-    # # plt.ylabel('H_integrand')
-    # # plt.show()
-    #
-    # # Φ function
-    # f = []
-    # gammas = np.logspace(np.log10(gamma_limit.value) ,20, 1000)
-    # x = gamma_limit / gammas
-    # eta = 30 * 0.313
-    # for i in x:
-    #     f.append(phi_gamma(eta, i, 'photon'))
-    #
-    # plt.loglog(x,x*f)
-    # plt.show()
-    # start = timeit.default_timer()
 
     # EXAMPLE AHARONIAN:
 
@@ -313,7 +263,7 @@ if __name__ == '__main__':
     mpc2 = (m_p * c ** 2).to('eV')
     nu = np.logspace(23,37,100)*u.Hz
 
-    gammas = epsilon_equivalency(nu_aha2, m = m_e)
+    # gammas = epsilon_equivalency(nu_aha2, m = m_e)
     ene = nu * h.to('eV s')
 
     A1 = (0.26506*1e11)/(mpc2.value**2) * u.Unit('cm-3')
@@ -324,16 +274,16 @@ if __name__ == '__main__':
     p = 2.
 
     E_star = 3*1e20 * u.eV
-    E_cut = 0.1 * E_star
+    E_cut = 1 * E_star
 
     gamma_cut = E_cut / mpc2
 
-    p_dist = ECPL(A1, p, gamma_cut, 1, 1e20)
+    p_dist = ECPL(A2, p, gamma_cut, 1, 1e20)
     #p_dist = PL(A, p ,1, 1e19)
-    proton_gamma = PhotoHadronicInteraction_Reference(p_dist, BlackBody)
+    proton_gamma = PhotoHadronicInteraction_Reference3(p_dist, BlackBody)
 
     spec = proton_gamma.spectrum(nu_aha, 'photon')
-    spec_ele = proton_gamma.spectrum(gammas, 'electron')
+    # spec_ele = proton_gamma.spectrum(gammas, 'electron')
 
     # spec_posi = proton_gamma.spectrum_electron(gammas, 'positron')
     # spec_nu_muon = proton_gamma.spectrum(nu3, 'nu_muon')
@@ -343,9 +293,8 @@ if __name__ == '__main__':
     #
     plt.loglog((E), (spec * E ), color='orange')
     plt.loglog((E), (EdNdE), '.')
-    plt.loglog((E2), (spec_ele * E2 ), color='blue')
-    plt.loglog((E2), (E2dNdE), '.')
-
+    # plt.loglog((E2), (spec_ele * E2 ), color='blue')
+    # plt.loglog((E2), (E2dNdE), '.')
 
     # plt.loglog((E3), (spec_nu_muon * E3), lw=2.2, ls='-', color='red',label = 'spec_nu_muon')
     # plt.loglog((ene), (spec_antinu_muon * ene ), lw=2.2, ls='-', color='blue',label = 'spec_antinu_muon')
