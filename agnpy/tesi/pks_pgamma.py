@@ -12,7 +12,7 @@ from agnpy.photomeson import PhotoHadronicInteraction
 from agnpy.spectra import PowerLaw, ExpCutoffPowerLaw, BrokenPowerLaw
 from agnpy.emission_regions import Blob
 
-plt.style.use('proton_synchrotron')
+#plt.style.use('proton_synchrotron')
 start = timeit.default_timer()
 lognu, lognuFnu= np.genfromtxt('data/Cerruti/second_email/test_pss.dat',  dtype = 'float', comments = '#', usecols = (0,4), unpack = True)
 nu_data = 10**lognu
