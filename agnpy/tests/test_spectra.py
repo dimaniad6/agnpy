@@ -552,10 +552,17 @@ class TestExpCutoffBrokenPowerLaw:
 
     @pytest.mark.parametrize("p1", np.arange(1, 2, 0.5))
     @pytest.mark.parametrize("p2", np.arange(3, 4, 0.5))
+<<<<<<< HEAD
     @pytest.mark.parametrize("gamma_c", np.logspace(3, 5, 3))
     @pytest.mark.parametrize("gamma_b", np.logspace(3, 5, 3))
     @pytest.mark.parametrize("gamma_min", np.logspace(0, 2, 3))
     @pytest.mark.parametrize("gamma_max", np.logspace(6, 8, 3))
+=======
+    @pytest.mark.parametrize("gamma_b", np.logspace(3, 5, 3))
+    @pytest.mark.parametrize("gamma_min", np.logspace(0, 2, 3))
+    @pytest.mark.parametrize("gamma_max", np.logspace(6, 8, 3))
+    @pytest.mark.parametrize("gamma_c", np.logspace(3, 5, 3))
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
     def test_init(self, p1, p2, gamma_c, gamma_b, gamma_min, gamma_max):
         """Test the intialisation of the broken power law with the different methods."""
         # initialisation from total density
@@ -625,10 +632,17 @@ class TestExpCutoffBrokenPowerLaw:
         assert u.isclose(u_p_tot, u_tot, atol=0 * u.Unit("erg cm-3"), rtol=1e-2)
 
         # initialisation from the density at gamma=1
+<<<<<<< HEAD
         n_1 = 1e-13 * u.Unit("cm-3")
 
         ebpwl_e = ExpCutoffBrokenPowerLaw.from_density_at_gamma_1(
             n_gamma_1=n_1,
+=======
+        n_gamma_1 = 1e-13 * u.Unit("cm-3")
+
+        ebpwl_e = ExpCutoffBrokenPowerLaw.from_density_at_gamma_1(
+            n_gamma_1=n_gamma_1,
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
             mass=m_e,
             p1=p1,
             p2=p2,
@@ -640,7 +654,11 @@ class TestExpCutoffBrokenPowerLaw:
         assert ebpwl_e.particle == "electrons"
 
         ebpwl_p = ExpCutoffBrokenPowerLaw.from_density_at_gamma_1(
+<<<<<<< HEAD
             n_gamma_1=n_1,
+=======
+            n_gamma_1=n_gamma_1,
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
             mass=m_p,
             p1=p1,
             p2=p2,
@@ -652,8 +670,13 @@ class TestExpCutoffBrokenPowerLaw:
         assert ebpwl_p.particle == "protons"
 
         # check that the value at gamma=1 is the value we set initially
+<<<<<<< HEAD
         assert u.isclose(n_1, ebpwl_e(1), atol=0 * u.Unit("cm-3"), rtol=1e-2)
         assert u.isclose(n_1, ebpwl_p(1), atol=0 * u.Unit("cm-3"), rtol=1e-2)
+=======
+        assert u.isclose(n_gamma_1, ebpwl_e(1), atol=0 * u.Unit("cm-3"), rtol=1e-2)
+        assert u.isclose(n_gamma_1, ebpwl_p(1), atol=0 * u.Unit("cm-3"), rtol=1e-2)
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
 
 
 class TestInterpolatedDistribution:
