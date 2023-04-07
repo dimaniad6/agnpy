@@ -175,7 +175,7 @@ class PhotoHadronicInteraction_Reference:
             else:
                 gamma_limit = g
 
-            gamma_range = [gamma_limit,  1e13]  # Do not change the upper limit
+            gamma_range = [gamma_limit,  np.inf]  # Do not change the upper limit
 
             if particle in ('electron', 'antinu_electron'):
                 eta_range = [0.945, 31.3]

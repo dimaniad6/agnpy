@@ -12,30 +12,7 @@ from ..utils.conversion import nu_to_epsilon_prime, B_to_cgs, lambda_c_e
 # to be used in the future to make the code faster:
 import numba as nb
 
-''' Photo-meson production process
-
-    Reference for all expressions:
-    Kelner, S.R., Aharonian, 2008, Phys.Rev.D 78, 034013
-    (`arXiv:astro-ph/0803.0688 <https://arxiv.org/abs/0803.0688>`_).
-
-    The code is using the results from the above reference. The emission region is
-    modified to be the blob of the blazar. Instead of the energies of protons, soft photons
-    and neutrinos, lorentz factors and the dimentionless energies are being used.
-    Neutrinos are being treated as photons but as particles in the transformation of one
-    reference frame to the other.
-
-    The class is initiated by the blob and the soft photon distribution. It computes
-    the SED for the final products of the interaction. In such approach, the secondaries
-    are integrated out, and therefore their cooling is not described.
-
-    The wanted output particle is given by the user from the variable $particle,
-    which can take the following values:
-
-    photon, positron, antinu_muon, nu_electron, nu_muon, electron, antinu_electron
-
-'''
-
-__all__ = ['PhotoMesonProduction']
+__all__ = ['PhotoHadronicInteraction_boh']
 
 mpc2 = (m_p * c ** 2).to('eV')
 mec2 = (m_e * c ** 2).to('eV')
@@ -70,7 +47,6 @@ def lookup_tab1(eta, particle):
     B_int = interp1d(eta_eta0, B, kind='linear', bounds_error=False, fill_value="extrapolate")
 
     return s_int(eta), delta_int(eta), B_int(eta)
-
 
 def x_plus_minus(eta, particle):
     """
@@ -124,8 +100,7 @@ def x_plus_minus(eta, particle):
 
         return xp, (x_minus * 0.427)
 
-
-def phi_gamma(eta, x, particle):
+def phi_gamma_2(eta, x, particle):
     """ Kelner2008 Eq27-29
     Parameters
     ----------
@@ -150,39 +125,38 @@ def phi_gamma(eta, x, particle):
         psi = 6 * (1 - np.exp(1.5 * (4 - eta/0.313))) * (np.sign(eta/0.313 - 4) + 1) / 2.
         # the np.sign part is the heavinside function of (rho - 4) where rho = eta/eta0
 
-    if x > x_n and x < x_p:
-        y = (x - x_n) / (x_p - x_n)
-        ln1 = np.exp(- s * (np.log(x / x_n)) ** delta)
-        ln2 = np.log(2. / (1 + y**2))
-        return B * ln1 * ln2 ** psi
+    y = (x - x_n) / (x_p - x_n)
+    ln1 = np.exp(- s * (np.log(x / x_n)) ** delta)
+    ln2 = np.log(2. / (1 + y**2))
 
-    elif x < x_n:
-        return B * (np.log(2)) ** psi
+    return B * ln1 * ln2 ** psi
 
-    elif x > x_p:
-        return 0
+def phi_gamma_1(eta,x,particle):
+
+    s, delta, B = lookup_tab1(eta / 0.313, particle) # eta_0 = 0.313
+
+    if particle == 'photon':
+        psi = 2.5 + 0.4 * np.log(eta / 0.313)
+    elif particle in ('positron', 'antinu_muon', 'nu_electron', 'nu_muon'):
+        psi = 2.5 + 1.4 * np.log(eta / 0.313)
+    elif particle in ('electron', 'antinu_electron'):
+        psi = 6 * (1 - np.exp(1.5 * (4 - eta/0.313))) * (np.sign(eta/0.313 - 4) + 1) / 2.
+
+    return B * (np.log(2)) ** psi
+
+def phi_gamma_3(eta,x,particle):
+    return 0
+
+def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
+
+    return (1 / gamma ** 2  *
+        particle_distribution(gamma).value *
+        soft_photon_dist((eta /  (4*gamma))).value*
+        phi_gamma(eta, gamma_limit/gamma , particle)
+    )
 
 
-# def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
-#
-#     return (1 / gamma ** 2  *
-#         particle_distribution(gamma).value *
-#         soft_photon_dist((eta /  (4*gamma))).value*
-#         phi_gamma(eta, gamma_limit/gamma , particle))
-
-def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
-
-    u = 10**y
-    u_limit = 10**y_limit
-
-    return (1/ u**2 *
-        particle_distribution(u).value *
-        soft_photon_dist((eta /  (4*u))).value*
-        phi_gamma(eta, u_limit/u , particle)
-        * u * np.log(10))
-
-
-class PhotoMesonProduction:
+class PhotoHadronicInteraction_boh:
 
     def __init__(self, blob, soft_photon_distribution, integrator = np.trapz):
 
@@ -195,7 +169,10 @@ class PhotoMesonProduction:
         gammas,
         particle_distribution,
         soft_photon_distribution,
-        particle
+        particle,
+        integrator,
+        gamma_max,
+        *args,
     ):
         output_spec = gammas #it is either gammas for electrons, positrons or epsilon for photons, neutrinos
         spectrum_array = np.zeros(len(output_spec))
@@ -203,33 +180,65 @@ class PhotoMesonProduction:
         for i, g in enumerate(output_spec):
 
             if particle in ('electron','positron'):
-                gamma_limit = g * (mec2/mpc2)
+                gamma_limit = (g * (mec2/mpc2)).value
             else:
-                gamma_limit = g
+                gamma_limit = g.value
 
             if particle in ('electron', 'antinu_electron'):
-                eta_range = [0.945, 31.3]
+                eta_range = np.linspace(0.945, 31.3,100)
             else:
-                eta_range = [0.3443, 31.3]
+                eta_range = np.linspace(0.3443, 31.3, 100)
 
-            gamma_max = 1e15
             dNdE = []
-            gamma_range = [gamma_limit,gamma_max]
-            y_limit = np.log10(gamma_limit)
-            y_max = np.log10(gamma_max)
-            y_range = [y_limit,y_max]
+            H = []
+            for eta in eta_range:
+                # print ('eta is: ', eta)
+                gamma_p = np.logspace(np.log10(gamma_limit), np.log10(gamma_max),200)
+                # Divide x into three arrays for the three cases of phi_gamma
+                x = gamma_limit / gamma_p
 
-            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_log,
-                                        [y_range, eta_range],
-                                        args=[y_limit,
-                                        particle_distribution,
-                                        soft_photon_distribution,
-                                        particle]
-                                        )[0])
+                x1,x2,x3 = [],[],[]
+                fi_1,fi_2,fi_3 = [],[],[]
+                x_p, x_n = x_plus_minus(eta, particle)
 
+                # we get three gamma arrays for three different integrations
 
+                for k in x:
+                    if k > x_n and k < x_p:
+                        x2.append(k)
+                    elif k < x_n:
+                        x1.append(k)
+                    elif k > x_p:
+                        x3.append(k)
 
-            spectrum_array[i] = sum(dNdE)
+                for k in x1:
+                    fi_1.append(phi_gamma_1(eta, k, particle))
+                for k in x2:
+                    fi_2.append(phi_gamma_2(eta, k, particle))
+                for k in x3:
+                    fi_3.append(phi_gamma_3(eta, k, particle))
+
+                # functions of the integrand
+                fi = fi_1 + fi_2 + fi_3
+                _fi = np.array(fi)
+                _n_p = particle_distribution.evaluate(gamma_p, *args)
+                _f_ph = soft_photon_distribution(eta / (4 * gamma_p) )
+
+                # integration
+                integrand = (gamma_p**2) * _n_p * _f_ph * _fi
+                integral_gamma_p = integrator(integrand, gamma_p, axis=0)
+                # print (integral_gamma_p)
+                H.append((1 / 4) * (mpc2.value) * integral_gamma_p.value)
+
+            H = np.array(H)
+            _H = np.reshape(H, (1,H.size))
+            _eta = np.reshape(eta_range, (H.size,1))
+            # _H, _eta = axes_reshaper(H,eta_range)
+
+            dNdE = integrator(_H, _eta, axis = 0)
+
+            spectrum_array[i] = dNdE
+
             print (spectrum_array[i])
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
@@ -248,8 +257,9 @@ class PhotoMesonProduction:
         B,
         R_b,
         n_p,
+        *args,
         integrator=np.trapz,
-        gamma=gamma_p_to_integrate,
+        gamma_max,
     ):
 
         vol = ((4. / 3) * np.pi * R_b ** 3)
@@ -274,9 +284,10 @@ class PhotoMesonProduction:
             epsilon = nu_to_epsilon_prime(input, 0., delta_D, m = m_p) # neutrinos: no redshift like photons
             massa = mpc2.to('erg')
 
+
         sed_source_frame = (
-                PhotoMesonProduction.spectrum(
-                epsilon, n_p, soft_photon_distribution,particle
+                PhotoHadronicInteraction_boh.spectrum(
+                epsilon, n_p, soft_photon_distribution,particle, integrator, gamma_max, *args
                 ) * (vol / area) * (epsilon * massa) ** 2
         ).to("erg cm-2 s-1")
 
@@ -297,14 +308,15 @@ class PhotoMesonProduction:
             self.blob.B,
             self.blob.R_b,
             self.blob.n_p,
+            *self.blob.n_p.parameters,
             integrator=self.integrator,
-            gamma=self.blob.gamma_p,
+            gamma_max = self.blob.n_p.gamma_max,
         )
 
     def sed_luminosity(self, input, particle):
         r"""Evaluates the synchrotron luminosity SED
         :math:`\nu L_{\nu} \, [\mathrm{erg}\,\mathrm{s}^{-1}]`
-        for a PhotoMesonProduction object built from a blob."""
+        for a PhotoHadronicInteraction object built from a blob."""
         sphere = 4 * np.pi * np.power(self.blob.d_L, 2)
         return (sphere * self.sed_flux(nu, particle)).to("erg s-1")
 

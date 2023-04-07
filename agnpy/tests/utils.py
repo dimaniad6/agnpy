@@ -180,3 +180,188 @@ def make_comparison_plot(
     fig.savefig(f"{fig_path}")
     # avoid RuntimeWarning: More than 20 figures have been opened.
     plt.close(fig)
+
+# For comparison plots of the kelner code
+def make2_comparison_plot(
+    E,
+    y_comp,
+    y_ref,
+    comp_label,
+    ref_label,
+    fig_title,
+    fig_path,
+    plot_type,
+    y_range=None,
+    comparison_range=None
+):
+    """Make a comparison plot, for SED or gamma-gamma absorption
+    between two different sources: a reference (literature or another code)
+    and a comparison (usually the agnpy result)
+
+    Parameters
+    ----------
+    nu: :class:`~astropy.units.Quantity`
+        frequencies over which the comparison plot has to be plotted
+    y_comp: :class:`~astropy.units.Quantity` or :class:`~numpy.ndarray`
+        SED or gamma-gamma absorption to be compared (usually agnpy)
+    y_ref: :class:`~astropy.units.Quantity` or :class:`~numpy.ndarray`
+        reference SED or gamma-gamma absorption (from literature or another code)
+    ref_label : `string`
+        label of the reference model
+    comp_label : `string`
+        label of the comparison model
+    fig_title : `string`
+        upper title of the figure
+    fig_path : `string`
+        path to save the figure
+    plot_type : `{"sed", "tau", ...}`
+        whether we are doing a comparison plot for a SED or an optical depth
+        if another string is specified it will be used for the y axis
+    y_range : list of float
+        lower and upper limit of the y axis limt
+    comparison_range : list of float
+        plot the range over which the residuals were checked
+
+    NOTE: the default scale is logarithmic on the x and y axis of the quantities
+    and on the x axis of the deviation.
+    """
+
+    if plot_type == "sed":
+        # set the axes labels for an SED plot
+        x_label = SED_X_LABEL
+        y_label = SED_Y_LABEL
+        deviation_label = SED_DEVIATION_LABEL
+    elif plot_type == "tau":
+        # set the axes labels for a tau plot
+        x_label = TAU_X_LABEL
+        y_label = TAU_Y_LABEL
+        deviation_label = TAU_DEVIATION_LABEL
+    else:
+        # set a custom y label, keep the x-axis in frequency
+        x_label = SED_X_LABEL
+        y_label = plot_type
+        deviation_label = f"({plot_type} agnpy / {plot_type} ref.) - 1"
+    # make the plot
+    fig, ax = plt.subplots(
+        2,
+        sharex=True,
+        gridspec_kw={"height_ratios": [2, 1], "hspace": 0.05},
+        figsize=(8, 6),
+    )
+
+    # plot the SEDs or TAUs in the upper panel
+    # plot the reference sed with a continuous line and agnpy sed with a dashed one
+    ax[0].loglog(E, y_ref, ls="-", color="k", lw=1.5, label=ref_label)
+    ax[0].loglog(
+        E, y_comp,  marker=".", markersize = 5, ls="--", color="crimson", lw=1.5, label=comp_label
+    )
+    ax[0].set_ylabel(y_label)
+    ax[0].set_title(fig_title)
+    ax[0].set_xlim([1e17,1e21])
+    ax[0].legend(loc="best")
+    if y_range is not None:
+        ax[0].set_ylim(y_range)
+
+    ax[0].grid(ls=":")
+
+    # plot the deviation in the bottom panel
+    deviation = y_comp / y_ref - 1
+    ax[1].axhline(0, ls="-", color="darkgray")
+    ax[1].axhline(0.2, ls="--", color="darkgray")
+    ax[1].axhline(-0.2, ls="--", color="darkgray")
+    ax[1].axhline(0.3, ls=":", color="darkgray")
+    ax[1].axhline(-0.3, ls=":", color="darkgray")
+    ax[1].set_ylim([-0.5, 0.5])
+    ax[1].semilogx(
+        E,
+        deviation,
+
+        ls="-",
+        color="crimson",
+        lw=1.5,
+        label=deviation_label,
+    )
+    ax[1].set_xlabel(x_label)
+    ax[1].legend(loc="best")
+
+
+    fig.savefig(f"{fig_path}")
+    # avoid RuntimeWarning: More than 20 figures have been opened.
+    plt.close(fig)
+
+def make3_comparison_plot(
+    E1,
+    E2,
+    E3,
+    y_comp1,
+    y_comp2,
+    y_comp3,
+    y_ref1,
+    y_ref2,
+    y_ref3,
+    comp_label,
+    ref_label,
+    fig_title,
+    fig_path,
+    plot_type,
+    y_range=None,
+    comparison_range=None
+):
+
+    x_label = "$E [eV]$"
+    y_label = "$E dNdE [cm^{-3} s^{-1}]$"
+    deviation_label = f"(EdNdE agnpy / EdNdE ref.) - 1"
+    # make the plot
+    fig, ax = plt.subplots(
+        5,
+        sharex=True,
+        #gridspec_kw={"height_ratios": [2, 1], "hspace": 0.05},
+        figsize=(8, 6),
+    )
+
+    # plot the SEDs or TAUs in the upper panel
+    # plot the reference sed with a continuous line and agnpy sed with a dashed one
+    ax[0].loglog(E1, y_ref1, marker=".", ls="-", color="k", lw=1.5, label=ref_label)
+    ax[0].loglog(
+        E1, y_comp1, marker=".", ls="--", color="crimson", lw=1.5, label=comp_label
+    )
+    ax[0].loglog(E2, y_ref2, marker=".", ls="-", color="k", lw=1.5, label=ref_label)
+    ax[0].loglog(
+        E2, y_comp2, marker=".", ls="--", color="crimson", lw=1.5, label=comp_label
+    )
+    ax[0].loglog(E3, y_ref3, marker=".", ls="-", color="k", lw=1.5, label=ref_label)
+    ax[0].loglog(
+        E3, y_comp3, marker=".", ls="--", color="crimson", lw=1.5, label=comp_label
+    )
+    ax[0].set_ylabel(y_label)
+    ax[0].set_title(fig_title)
+    ax[0].legend(loc="best")
+    if y_range is not None:
+        ax[0].set_ylim(y_range)
+
+    ax[0].grid(ls=":")
+
+    # plot the deviation in the bottom panel
+    deviation = y_comp1 / y_ref1 - 1
+    ax[1].axhline(0, ls="-", color="darkgray")
+    ax[1].axhline(0.2, ls="--", color="darkgray")
+    ax[1].axhline(-0.2, ls="--", color="darkgray")
+    ax[1].axhline(0.3, ls=":", color="darkgray")
+    ax[1].axhline(-0.3, ls=":", color="darkgray")
+    ax[1].set_ylim([-0.5, 0.5])
+    ax[1].semilogx(
+        E1,
+        deviation,
+        marker=".",
+        ls="--",
+        color="crimson",
+        lw=1.5,
+        label=deviation_label,
+    )
+    ax[1].set_xlabel(x_label)
+    ax[1].legend(loc="best")
+
+
+    fig.savefig(f"{fig_path}")
+    # avoid RuntimeWarning: More than 20 figures have been opened.
+    plt.close(fig)

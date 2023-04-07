@@ -11,7 +11,7 @@ from agnpy.synchrotron import Synchrotron, nu_synch_peak
 from agnpy.synchrotron import ProtonSynchrotron, Synchrotron
 from agnpy.utils.math import trapz_loglog
 from .utils import (
-    make_comparison_plot,
+    make2_comparison_plot,
     extract_columns_sample_file,
     check_deviation,
     clean_and_make_dir,
@@ -53,7 +53,7 @@ class TestProtonSynchrotron2:
             mass=m_p
         )
 
-        # n_p = ExpCutoffPowerLaw(k=7.726e-4 / u.Unit('cm3'), #7.726e-4 / u.Unit('cm3'), 
+        # n_p = ExpCutoffPowerLaw(k=7.726e-4 / u.Unit('cm3'), #7.726e-4 / u.Unit('cm3'),
         #     p = 1.5 ,
         #     gamma_c= 2.78e9, #2.72e9, #3.64227e+09,
         #     gamma_min= 1,
@@ -74,19 +74,19 @@ class TestProtonSynchrotron2:
 
         # sed comparison plot
         nu_range = [1e10, 1e28] * u.Hz
-        make_comparison_plot(
+        make2_comparison_plot(
             nu_ref,
             sed_agnpy,
             sed_ref,
             "agnpy",
-            "Cerruti model",
+            "LeHa",
             "Proton Synchrotron",
-            f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures/proton_synch_comparison_Cerruti_model2.png",
+            f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures/proton_synch_comparison_Cerruti_model2.eps",
             "sed",
             # y_range=[1e-16, 1e-8],
             comparison_range=nu_range.to_value("Hz"),
         )
-        
+
         # requires that the SED points deviate less than 25% from the figure
         assert check_deviation(nu_ref, sed_agnpy, sed_ref, 0.8, nu_range)
 
@@ -170,7 +170,7 @@ class TestElectronSynchrotron2:
             mass=m_e
         )
 
-        # n_e = ExpCutoffPowerLaw(k=2.5e2 / u.Unit('cm3'), #2.5e2 #7.726e-4 / u.Unit('cm3'), 
+        # n_e = ExpCutoffPowerLaw(k=2.5e2 / u.Unit('cm3'), #2.5e2 #7.726e-4 / u.Unit('cm3'),
         #     p = 2.5 ,
         #     gamma_c= 26441.5,
         #     gamma_min= 200,
@@ -203,7 +203,7 @@ class TestElectronSynchrotron2:
             y_range=[1e-20, 1e-9],
             comparison_range=nu_range.to_value("Hz"),
         )
-        
+
         # requires that the SED points deviate less than 25% from the figure
         assert check_deviation(nu_ref, sed_agnpy, sed_ref, 0.8, nu_range)
 
@@ -218,4 +218,3 @@ class TestElectronSynchrotron2:
         gamma = 100
         nu_synch = nu_synch_peak(1 * u.G, gamma).to_value("Hz")
         assert np.isclose(nu_synch, 27992489872.33304, atol=0)
-

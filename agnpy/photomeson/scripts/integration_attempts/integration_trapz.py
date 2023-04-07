@@ -12,7 +12,7 @@ from ..utils.conversion import nu_to_epsilon_prime, B_to_cgs, lambda_c_e
 # to be used in the future to make the code faster:
 import numba as nb
 
-''' Photo-meson production process
+''' PhotoHadronic Interaction
 
     Reference for all expressions:
     Kelner, S.R., Aharonian, 2008, Phys.Rev.D 78, 034013
@@ -21,7 +21,7 @@ import numba as nb
     The code is using the results from the above reference. The emission region is
     modified to be the blob of the blazar. Instead of the energies of protons, soft photons
     and neutrinos, lorentz factors and the dimentionless energies are being used.
-    Neutrinos are being treated as photons but as particles in the transformation of one
+    Neutrinos are being treated as photons but as leptons in the transformation of one
     reference frame to the other.
 
     The class is initiated by the blob and the soft photon distribution. It computes
@@ -35,7 +35,7 @@ import numba as nb
 
 '''
 
-__all__ = ['PhotoMesonProduction']
+__all__ = ['PhotoHadronicInteraction']
 
 mpc2 = (m_p * c ** 2).to('eV')
 mec2 = (m_e * c ** 2).to('eV')
@@ -163,26 +163,36 @@ def phi_gamma(eta, x, particle):
         return 0
 
 
-# def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
-#
-#     return (1 / gamma ** 2  *
-#         particle_distribution(gamma).value *
-#         soft_photon_dist((eta /  (4*gamma))).value*
-#         phi_gamma(eta, gamma_limit/gamma , particle))
+def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
+    """
+    Parameters
+    -----------
+    gamma:float
+        Lorentz factor of protons
 
-def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
+    eta: float
 
-    u = 10**y
-    u_limit = 10**y_limit
+    gamma_limit: float
+        Lower limit of the integration, taken from the dimensionless energies or
+        the lorentz factors of the output particle
+    particle_distribution: function
+        proton distribution
+    soft_photon_dist: function
+        soft photon distribution (target photons)
+    particle: string
+        type of output particle
 
-    return (1/ u**2 *
-        particle_distribution(u).value *
-        soft_photon_dist((eta /  (4*u))).value*
-        phi_gamma(eta, u_limit/u , particle)
-        * u * np.log(10))
+    Returns: integrand of Eq70 Kelner2008
+    """
+
+    return (1 / gamma ** 2  *
+        particle_distribution(gamma).value *
+        soft_photon_dist((eta /  (4*gamma))).value*
+        phi_gamma(eta, gamma_limit/gamma , particle)
+    )
 
 
-class PhotoMesonProduction:
+class PhotoHadronicInteraction:
 
     def __init__(self, blob, soft_photon_distribution, integrator = np.trapz):
 
@@ -210,26 +220,32 @@ class PhotoMesonProduction:
             if particle in ('electron', 'antinu_electron'):
                 eta_range = [0.945, 31.3]
             else:
-                eta_range = [0.3443, 31.3]
+                eta_range = np.linspace(0.3443, 31.3,30)
+            h = eta_range[1] - eta_range[0]
 
             gamma_max = 1e15
             dNdE = []
             gamma_range = [gamma_limit,gamma_max]
-            y_limit = np.log10(gamma_limit)
-            y_max = np.log10(gamma_max)
-            y_range = [y_limit,y_max]
+            int1 = []
+            for eta in eta_range:
+                int1.append( quad(H_integrand,
+                            gamma_limit,gamma_max,
+                            args=(eta, gamma_limit,
+                            particle_distribution,
+                            soft_photon_distribution,
+                            particle)
+                            )[0])
+                print (int1)
+            sum = 0
 
-            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_log,
-                                        [y_range, eta_range],
-                                        args=[y_limit,
-                                        particle_distribution,
-                                        soft_photon_distribution,
-                                        particle]
-                                        )[0])
+            for e in range(1,len(eta_range)-1):
+                sum =+ int1[i]
 
+            dNdE = (1 / 4) * (mpc2.value) *  h*(0.5*int1[0]+0.5*int1[29]+sum)
 
+            print ('gamo tin panagia mou: ', dNdE)
 
-            spectrum_array[i] = sum(dNdE)
+            spectrum_array[i] = dNdE
             print (spectrum_array[i])
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
@@ -275,7 +291,7 @@ class PhotoMesonProduction:
             massa = mpc2.to('erg')
 
         sed_source_frame = (
-                PhotoMesonProduction.spectrum(
+                PhotoHadronicInteraction.spectrum(
                 epsilon, n_p, soft_photon_distribution,particle
                 ) * (vol / area) * (epsilon * massa) ** 2
         ).to("erg cm-2 s-1")
@@ -304,7 +320,7 @@ class PhotoMesonProduction:
     def sed_luminosity(self, input, particle):
         r"""Evaluates the synchrotron luminosity SED
         :math:`\nu L_{\nu} \, [\mathrm{erg}\,\mathrm{s}^{-1}]`
-        for a PhotoMesonProduction object built from a blob."""
+        for a PhotoHadronicInteraction object built from a blob."""
         sphere = 4 * np.pi * np.power(self.blob.d_L, 2)
         return (sphere * self.sed_flux(nu, particle)).to("erg s-1")
 

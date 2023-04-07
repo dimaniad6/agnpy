@@ -158,7 +158,6 @@ class ProtonSynchrotron:
             self.blob.R_b,
             self.blob.n_p,
             *self.blob.n_p.parameters,
-            ssa=self.ssa,
             integrator=self.integrator,
             gamma=self.blob.gamma_p,
         )
