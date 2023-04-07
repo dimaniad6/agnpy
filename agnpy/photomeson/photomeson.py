@@ -10,7 +10,7 @@ import re
 from ..utils.math import axes_reshaper, gamma_p_to_integrate
 from ..utils.conversion import nu_to_epsilon_prime, B_to_cgs, lambda_c_e
 # to be used in the future to make the code faster:
-import numba as nb
+#import numba as nb
 
 ''' Photo-meson production process
 

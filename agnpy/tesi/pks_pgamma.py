@@ -15,7 +15,7 @@ from naima.models import BrokenPowerLaw as NBrokenPowerLaw
 from naima.models import Synchrotron as NSynchrotron
 from scipy.interpolate import CubicSpline
 
-plt.style.use('proton_synchrotron')
+#plt.style.use('proton_synchrotron')
 start = timeit.default_timer()
 lognu, lognuFnu= np.genfromtxt('data/Cerruti/second_email/test_pss.dat',  dtype = 'float', comments = '#', usecols = (0,4), unpack = True)
 nu_data = 10**lognu
