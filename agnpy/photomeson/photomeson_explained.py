@@ -171,6 +171,8 @@ def phi_gamma(eta, x, particle):
 #         phi_gamma(eta, gamma_limit/gamma , particle))
 
 def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
+# the integrand (not integral) of equation (70) but in a logarithmic space
+# y = log10(gamma) (leptons) or log10(epsilon) (photons, neutrinos)
 
     u = 10**y
     u_limit = 10**y_limit
@@ -183,6 +185,8 @@ def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
 
 
 class PhotoMesonProduction:
+# takes as an input the blob and the soft photon distribution from the user
+# and returns the SED of leptons or photons/neutrinos
 
     def __init__(self, blob, soft_photon_distribution, integrator = np.trapz):
 
@@ -191,6 +195,11 @@ class PhotoMesonProduction:
         self.integrator = integrator
 
     @staticmethod
+    # calculates the spectrum (eq. 69): the array of gammas/freqs initiated by the user is taken and for each one of
+    # the array elements, the spectrum is calculated. For example, in the case of the calculation of the spectrum of photons,
+    # we have the array (n_1,n_2,....n_N) which first is tranformed to epsilons and then is being taken as an input in this statismethod
+    # function "spectrum". For each element array epsilon, the dNdE is calculated. So basically, it takes the x axis, and calculates the y axis.
+
     def spectrum(
         gammas,
         particle_distribution,
@@ -202,6 +211,7 @@ class PhotoMesonProduction:
 
         for i, g in enumerate(output_spec):
 
+            # different integration limit for leptons vs photons/nu, because of the way the gammas or epsilons are defined (different mass)
             if particle in ('electron','positron'):
                 gamma_limit = g * (mec2/mpc2)
             else:
@@ -213,12 +223,14 @@ class PhotoMesonProduction:
                 eta_range = [0.3443, 31.3]
 
             gamma_max = 1e15
-
+            dNdE = []
             gamma_range = [gamma_limit,gamma_max]
+            # integration is in log space, so we use y
             y_limit = np.log10(gamma_limit)
             y_max = np.log10(gamma_max)
             y_range = [y_limit,y_max]
 
+            # 2D integration using scipy: over eta and over y
             dNdE = ((1 / 4) * (mpc2.value) *  nquad(H_log,
                                         [y_range, eta_range],
                                         args=[y_limit,
@@ -228,8 +240,8 @@ class PhotoMesonProduction:
                                         )[0])
 
 
-
             spectrum_array[i] = dNdE
+
             print (spectrum_array[i])
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
@@ -252,7 +264,9 @@ class PhotoMesonProduction:
         gamma=gamma_p_to_integrate,
     ):
 
+        # volume of blob
         vol = ((4. / 3) * np.pi * R_b ** 3)
+        # Area for the calculation of the flux: area of sphere with R = luminosity distance
         area = (4 * np.pi * d_L ** 2)
 
         #checking variable's name:
@@ -261,6 +275,7 @@ class PhotoMesonProduction:
                 f"Invalid output particle name: {particle}. Available output particles: {particles_string}"
                 )
 
+        # This is wrong: doppler shift to leptons? (the talk we had at your place about neutrinos and doppler shift)
         if particle in ('electron', 'positron'):
             epsilon =  input / delta_D # gamma prime at this case
             #epsilon = nu_to_epsilon_prime(input, 0., delta_D, m = m_p)
@@ -270,6 +285,7 @@ class PhotoMesonProduction:
             epsilon = nu_to_epsilon_prime(input, z, delta_D, m = m_p)
             massa = mpc2.to('erg')
 
+        # This is wrong: doppler shift to neutrinos? (the talk we had at your place about neutrinos and doppler shift)
         else:
             epsilon = nu_to_epsilon_prime(input, 0., delta_D, m = m_p) # neutrinos: no redshift like photons
             massa = mpc2.to('erg')
@@ -284,6 +300,7 @@ class PhotoMesonProduction:
 
         return sed
 
+    # the user uses this function:
     def sed_flux(self, input, particle):
         r"""Evaluates the photomeson flux SED for a photomeson object built
         from a Blob."""
