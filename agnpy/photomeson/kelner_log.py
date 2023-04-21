@@ -12,9 +12,9 @@ from agnpy.spectra import ExpCutoffPowerLaw as ECPL
 from agnpy.spectra import PowerLaw as PL
 # File with all available soft photon distributions:
 # to be used in the future to make the code faster:
-from numba import jit
+#from numba import jit
 
-def epsilon_equivalency(nu, m = m_e):
+def epsilon_equivalency(nu, m = m_e): #used in the main only
     if m == m_e:
         epsilon_equivalency = h.to('eV s') * nu / mec2
 
@@ -150,7 +150,7 @@ def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
 
 
 
-@jit(nopython=False)
+#@jit(nopython=False)
 def integrate(H_log,y_range, eta_range, y_limit, particle_distribution, soft_photon_distribution,particle):
     return ((1 / 4) * (mpc2.value) *  nquad(H_log,
                                 [y_range, eta_range],
@@ -240,7 +240,7 @@ class PhotoHadronicInteraction_log:
 
     def spectrum(self, input, particle):
         return self.evaluate_spectrum(
-            input,
+            input, #array of freq
             self.particle_distribution,
             self.soft_photon_distribution,
             particle
