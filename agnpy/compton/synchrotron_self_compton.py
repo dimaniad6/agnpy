@@ -55,16 +55,16 @@ class SynchrotronSelfCompton:
         Parameters
         ----------
         nu : :class:`~astropy.units.Quantity`
-            array of frequencies, in Hz, to compute the sed 
+            array of frequencies, in Hz, to compute the sed
             **note** these are observed frequencies (observer frame)
         z : float
             redshift of the source
-        d_L : :class:`~astropy.units.Quantity` 
+        d_L : :class:`~astropy.units.Quantity`
             luminosity distance of the source
         delta_D : float
             Doppler factor of the relativistic outflow
         B : :class:`~astropy.units.Quantity`
-            magnetic field in the blob 
+            magnetic field in the blob
         R_b : :class:`~astropy.units.Quantity`
             size of the emitting region (spherical blob assumed)
         n_e : :class:`~agnpy.spectra.ElectronDistribution`
@@ -76,7 +76,7 @@ class SynchrotronSelfCompton:
         integrator : func
             which function to use for integration, default `numpy.trapz`
         gamma : :class:`~numpy.ndarray`
-            array of Lorentz factor over which to integrate the electron 
+            array of Lorentz factor over which to integrate the electron
             distribution
 
         Returns
@@ -121,13 +121,13 @@ class SynchrotronSelfCompton:
             _u_synch / np.power(_epsilon, 2) * N_e / np.power(_gamma, 2) * kernel
         )
         integral_gamma = integrator(integrand, gamma, axis=0)
-        integral_epsilon = integrator(integral_gamma, epsilon, axis=0)
+        integral_epsilon = integrator(integral_gamma, epsilon, axis=0).reshape(epsilon_s.shape)
         emissivity = 3 / 4 * c * sigma_T * np.power(epsilon_s, 2) * integral_epsilon
         prefactor = np.power(delta_D, 4) / (4 * np.pi * np.power(d_L, 2))
         return (prefactor * emissivity).to("erg cm-2 s-1")
 
     def sed_flux(self, nu):
-        """Evaluates the SSC flux SED for a SynchrotronSelfComtpon 
+        """Evaluates the SSC flux SED for a SynchrotronSelfComtpon
         object built from a Blob."""
         return self.evaluate_sed_flux(
             nu,

@@ -1,0 +1,333 @@
+import astropy.units as u
+from astropy.constants import m_e, m_p, c, e, h
+from astropy.coordinates import Distance
+from scipy.integrate import quad, dblquad, nquad, simps, trapz
+from scipy.interpolate import interp1d
+import numpy as np
+import matplotlib.pyplot as plt
+import timeit
+import re
+from ..utils.math import axes_reshaper, gamma_p_to_integrate
+from ..utils.conversion import nu_to_epsilon_prime, B_to_cgs, lambda_c_e
+# to be used in the future to make the code faster:
+import numba as nb
+
+__all__ = ['PhotoHadronicInteraction_boh']
+
+mpc2 = (m_p * c ** 2).to('eV')
+mec2 = (m_e * c ** 2).to('eV')
+
+particles = ('photon','electron','positron','nu_electron','nu_muon','antinu_electron','antinu_muon' )
+particles_string = "photon, electron, positron, nu_electron, nu_muon, antinu_electron, antinu_muon"
+
+def lookup_tab1(eta, particle):
+    """
+    Interpolate the values of s, delta, B for the
+    parametrics form of _phi_gamma.
+    Interpolation tables from reference paper
+    Parameters
+    ----------
+    eta : float
+            see eqn 10.
+    particle : string
+            type of output particle
+    Returns
+    -------
+    s, delta, B : float
+            Return these quantities as function of eta / eta0
+    """
+    for i in particles:
+        if i == particle:
+            interp_file = "../data/interpolation_tables/{}.txt".format(i)
+
+    eta_eta0, s, delta, B = np.genfromtxt(interp_file, dtype = 'float',  comments = '#', usecols = (0,1,2,3), unpack = 'True')
+
+    s_int = interp1d(eta_eta0, s, kind='linear', bounds_error=False, fill_value="extrapolate")
+    delta_int = interp1d(eta_eta0, delta, kind='linear', bounds_error=False, fill_value="extrapolate")
+    B_int = interp1d(eta_eta0, B, kind='linear', bounds_error=False, fill_value="extrapolate")
+
+    return s_int(eta), delta_int(eta), B_int(eta)
+
+def x_plus_minus(eta, particle):
+    """
+    Eqn. 19 Kelner2008
+    Parameters
+    ----------
+    eta : float
+    particle: string
+
+    Returns
+    -------
+    xplus, xminus
+    According to Eqn 19
+    """
+    r = 0.146 # r = m_pi / M_p
+    x_1 = eta + r ** 2
+    x_2 = np.sqrt((eta - r ** 2 - 2 * r) * (eta - r ** 2 + 2 * r))
+    x_3 = 1 / (2 * (1 + eta))
+
+    x_plus = x_3 * (x_1 + x_2)
+    x_minus = x_3 * (x_1 - x_2)
+
+    if particle == 'photon':
+        return x_plus, x_minus
+
+    elif particle in ('positron', 'antinu_muon', 'nu_electron'):
+        """ According to Eqn 36 """
+        return x_plus, x_minus / 4
+
+    elif particle in ('electron', 'antinu_electron'):
+        """ According to Eqn 40 """
+        r = 0.146
+        x_1 = 2 * (1 + eta)
+        x_2 = eta - (2 * r)
+        x_3 = np.sqrt(eta * (eta - 4 * r * (1 + r)))
+
+        x_plus = (x_2 + x_3) / x_1
+        x_minus = (x_2 - x_3) / x_1
+
+        return x_plus, x_minus / 2
+
+    elif particle == 'nu_muon':
+        """ According to Eqn 36,37 """
+        rho = eta / 0.313
+        if rho < 2.14:
+            xp = 0.427 * x_plus
+        elif rho > 2.14 and rho < 10:
+            xp = (0.427 + 0.0729 * (rho - 2.14)) * x_plus
+        elif rho > 10:
+            xp = x_plus
+
+        return xp, (x_minus * 0.427)
+
+def phi_gamma_2(eta, x, particle):
+    """ Kelner2008 Eq27-29
+    Parameters
+    ----------
+    x : float
+        gamma / gamma_p
+    eta : float
+        see eqn.10 Kelner2008
+    Returns
+    -------
+    phi_gamma : float
+            Eqn27-29 Kelner2008
+    """
+    x_p, x_n = x_plus_minus(eta, particle)
+
+    s, delta, B = lookup_tab1(eta / 0.313, particle) # eta_0 = 0.313
+
+    if particle == 'photon':
+        psi = 2.5 + 0.4 * np.log(eta / 0.313)
+    elif particle in ('positron', 'antinu_muon', 'nu_electron', 'nu_muon'):
+        psi = 2.5 + 1.4 * np.log(eta / 0.313)
+    elif particle in ('electron', 'antinu_electron'):
+        psi = 6 * (1 - np.exp(1.5 * (4 - eta/0.313))) * (np.sign(eta/0.313 - 4) + 1) / 2.
+        # the np.sign part is the heavinside function of (rho - 4) where rho = eta/eta0
+
+    y = (x - x_n) / (x_p - x_n)
+    ln1 = np.exp(- s * (np.log(x / x_n)) ** delta)
+    ln2 = np.log(2. / (1 + y**2))
+
+    return B * ln1 * ln2 ** psi
+
+def phi_gamma_1(eta,x,particle):
+
+    s, delta, B = lookup_tab1(eta / 0.313, particle) # eta_0 = 0.313
+
+    if particle == 'photon':
+        psi = 2.5 + 0.4 * np.log(eta / 0.313)
+    elif particle in ('positron', 'antinu_muon', 'nu_electron', 'nu_muon'):
+        psi = 2.5 + 1.4 * np.log(eta / 0.313)
+    elif particle in ('electron', 'antinu_electron'):
+        psi = 6 * (1 - np.exp(1.5 * (4 - eta/0.313))) * (np.sign(eta/0.313 - 4) + 1) / 2.
+
+    return B * (np.log(2)) ** psi
+
+def phi_gamma_3(eta,x,particle):
+    return 0
+
+def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
+
+    return (1 / gamma ** 2  *
+        particle_distribution(gamma).value *
+        soft_photon_dist((eta /  (4*gamma))).value*
+        phi_gamma(eta, gamma_limit/gamma , particle)
+    )
+
+
+class PhotoHadronicInteraction_boh:
+
+    def __init__(self, blob, soft_photon_distribution, integrator = np.trapz):
+
+        self.blob = blob
+        self.soft_photon_distribution = soft_photon_distribution
+        self.integrator = integrator
+
+    @staticmethod
+    def spectrum(
+        gammas,
+        particle_distribution,
+        soft_photon_distribution,
+        particle,
+        integrator,
+        gamma_max,
+        *args,
+    ):
+        output_spec = gammas #it is either gammas for electrons, positrons or epsilon for photons, neutrinos
+        spectrum_array = np.zeros(len(output_spec))
+
+        for i, g in enumerate(output_spec):
+
+            if particle in ('electron','positron'):
+                gamma_limit = (g * (mec2/mpc2)).value
+            else:
+                gamma_limit = g.value
+
+            if particle in ('electron', 'antinu_electron'):
+                eta_range = np.linspace(0.945, 31.3,100)
+            else:
+                eta_range = np.linspace(0.3443, 31.3, 100)
+
+            dNdE = []
+            H = []
+            for eta in eta_range:
+                # print ('eta is: ', eta)
+                gamma_p = np.logspace(np.log10(gamma_limit), np.log10(gamma_max),200)
+                # Divide x into three arrays for the three cases of phi_gamma
+                x = gamma_limit / gamma_p
+
+                x1,x2,x3 = [],[],[]
+                fi_1,fi_2,fi_3 = [],[],[]
+                x_p, x_n = x_plus_minus(eta, particle)
+
+                # we get three gamma arrays for three different integrations
+
+                for k in x:
+                    if k > x_n and k < x_p:
+                        x2.append(k)
+                    elif k < x_n:
+                        x1.append(k)
+                    elif k > x_p:
+                        x3.append(k)
+
+                for k in x1:
+                    fi_1.append(phi_gamma_1(eta, k, particle))
+                for k in x2:
+                    fi_2.append(phi_gamma_2(eta, k, particle))
+                for k in x3:
+                    fi_3.append(phi_gamma_3(eta, k, particle))
+
+                # functions of the integrand
+                fi = fi_1 + fi_2 + fi_3
+                _fi = np.array(fi)
+                _n_p = particle_distribution.evaluate(gamma_p, *args)
+                _f_ph = soft_photon_distribution(eta / (4 * gamma_p) )
+
+                # integration
+                integrand = (gamma_p**2) * _n_p * _f_ph * _fi
+                integral_gamma_p = integrator(integrand, gamma_p, axis=0)
+                # print (integral_gamma_p)
+                H.append((1 / 4) * (mpc2.value) * integral_gamma_p.value)
+
+            H = np.array(H)
+            _H = np.reshape(H, (1,H.size))
+            _eta = np.reshape(eta_range, (H.size,1))
+            # _H, _eta = axes_reshaper(H,eta_range)
+
+            dNdE = integrator(_H, _eta, axis = 0)
+
+            spectrum_array[i] = dNdE
+
+            print (spectrum_array[i])
+            print ("Computing {} spectrum: {}% is completed..."
+                .format(particle ,int(100*(i+1) / len(output_spec))))
+
+        return (spectrum_array * u.Unit('eV-1 cm-3 s-1')).to('erg-1 cm-3 s-1')
+
+
+    @staticmethod
+    def evaluate_sed_flux(
+        input, # either frequencies or gammas
+        particle,
+        soft_photon_distribution,
+        z,
+        d_L,
+        delta_D,
+        B,
+        R_b,
+        n_p,
+        *args,
+        integrator=np.trapz,
+        gamma_max,
+    ):
+
+        vol = ((4. / 3) * np.pi * R_b ** 3)
+        area = (4 * np.pi * d_L ** 2)
+
+        #checking variable's name:
+        if particle not in particles:
+            raise ValueError(
+                f"Invalid output particle name: {particle}. Available output particles: {particles_string}"
+                )
+
+        if particle in ('electron', 'positron'):
+            epsilon =  input / delta_D # gamma prime at this case
+            #epsilon = nu_to_epsilon_prime(input, 0., delta_D, m = m_p)
+            massa = mec2.to('erg')
+
+        elif particle == 'photon':
+            epsilon = nu_to_epsilon_prime(input, z, delta_D, m = m_p)
+            massa = mpc2.to('erg')
+
+        else:
+            epsilon = nu_to_epsilon_prime(input, 0., delta_D, m = m_p) # neutrinos: no redshift like photons
+            massa = mpc2.to('erg')
+
+
+        sed_source_frame = (
+                PhotoHadronicInteraction_boh.spectrum(
+                epsilon, n_p, soft_photon_distribution,particle, integrator, gamma_max, *args
+                ) * (vol / area) * (epsilon * massa) ** 2
+        ).to("erg cm-2 s-1")
+
+        sed = sed_source_frame * np.power(delta_D, 4)
+
+        return sed
+
+    def sed_flux(self, input, particle):
+        r"""Evaluates the photomeson flux SED for a photomeson object built
+        from a Blob."""
+        return self.evaluate_sed_flux(
+            input, # either frequencies or gammas
+            particle,
+            self.soft_photon_distribution,
+            self.blob.z,
+            self.blob.d_L,
+            self.blob.delta_D,
+            self.blob.B,
+            self.blob.R_b,
+            self.blob.n_p,
+            *self.blob.n_p.parameters,
+            integrator=self.integrator,
+            gamma_max = self.blob.n_p.gamma_max,
+        )
+
+    def sed_luminosity(self, input, particle):
+        r"""Evaluates the synchrotron luminosity SED
+        :math:`\nu L_{\nu} \, [\mathrm{erg}\,\mathrm{s}^{-1}]`
+        for a PhotoHadronicInteraction object built from a blob."""
+        sphere = 4 * np.pi * np.power(self.blob.d_L, 2)
+        return (sphere * self.sed_flux(nu, particle)).to("erg s-1")
+
+    def sed_peak_flux(self, input, particle):
+        """provided a grid of frequencies nu or Lorentz factors gamma, returns the peak flux of the SED
+        """
+        return self.sed_flux(input, particle).max()
+
+    def sed_peak_nu(self, input):
+        """provided a grid of frequencies nu or Lorentz factors gamma, returns the frequency or Lorentz factor
+        at which the SED peaks
+        """
+        idx_max = self.sed_flux(input, particle).argmax()
+        return nu[idx_max]

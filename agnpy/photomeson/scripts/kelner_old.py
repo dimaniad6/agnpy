@@ -12,7 +12,7 @@ from agnpy.spectra import ExpCutoffPowerLaw as ECPL
 from agnpy.spectra import PowerLaw as PL
 # File with all available soft photon distributions:
 # to be used in the future to make the code faster:
-import numba as nb
+#import numba as nb
 
 def epsilon_equivalency(nu, m = m_e):
     if m == m_e:
@@ -175,7 +175,7 @@ class PhotoHadronicInteraction_Reference:
             else:
                 gamma_limit = g
 
-            gamma_range = [gamma_limit,  1e13]  # Do not change the upper limit
+            gamma_range = [gamma_limit,  np.inf]  # Do not change the upper limit
 
             if particle in ('electron', 'antinu_electron'):
                 eta_range = [0.945, 31.3]

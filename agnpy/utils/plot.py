@@ -34,3 +34,24 @@ def plot_sed(nu, sed, ax=None, **kwargs):
         ax.legend()
 
     return ax
+
+def plot_sed2(nu, ls, sed, ax=None, **kwargs):
+    """plot an SED
+
+    Parameters
+    ----------
+    nu: :class:`~astropy.units.Quantity`
+        frequency values
+    sed : :class:`~astropy.units.Quantity`
+        SED values
+    """
+    ax = plt.gca() if ax is None else ax
+
+    ax.loglog(nu, sed, **kwargs)
+    ax.set_xlabel(sed_x_label)
+    ax.set_ylabel(sed_y_label)
+
+    if "label" in kwargs:
+        ax.legend()
+
+    return ax

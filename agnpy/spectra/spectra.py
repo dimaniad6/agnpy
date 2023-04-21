@@ -485,7 +485,11 @@ class ExpCutoffPowerLaw(ParticleDistribution):
     When called, the particle density :math:`n_e(\gamma)` in :math:`\mathrm{cm}^{-3}` is returned.
 
     .. math::
+<<<<<<< HEAD
         n(\gamma') = k \, \gamma'^{-p} exp(-\gamma'/\gamma_c) \, H(\gamma'; \gamma'{\rm min}, \gamma'{\rm max})
+=======
+        n(\gamma'_c) = k \, \gamma'^{-p} exp(-\gamma'/\gamma_c) \, H(\gamma'; \gamma'{\rm min}, \gamma'{\rm max})
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
 
     Parameters
     ----------
@@ -557,7 +561,7 @@ class ExpCutoffPowerLaw(ParticleDistribution):
     def _str_(self):
         return (
             f"* {self.particle} energy distribution\n"
-            + f" - power law\n"
+            + f" - exponential cut-off power law\n"
             + f" - k: {self.k:.2e}\n"
             + f" - p: {self.p:.2f}\n"
             + f" - gamma_c: {self.gamma_c:.2f}\n"
@@ -571,7 +575,11 @@ class ExpCutoffBrokenPowerLaw(ParticleDistribution):
     When called, the particle density :math:`n(\gamma)` in :math:`\mathrm{cm}^{-3}` is returned.
 
     .. math::
+<<<<<<< HEAD
         n(\gamma') = k \left[
+=======
+        n(\gamma'_c) = k \left[
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
         \left(\frac{\gamma'}{\gamma'_b}\right)^{-p_1} exp(-\gamma'/\gamma_c) \, H(\gamma'; \gamma'_{\rm min}, \gamma'_b) +
         \left(\frac{\gamma'}{\gamma'_b}\right)^{-p_2} exp(-\gamma'/\gamma_c)\, H(\gamma'; \gamma'_{b}, \gamma'_{\rm max})
         \right]
@@ -680,7 +688,11 @@ class ExpCutoffBrokenPowerLaw(ParticleDistribution):
     def __str__(self):
         return (
             f"* {self.particle} energy distribution\n"
+<<<<<<< HEAD
             + f" - broken power law\n"
+=======
+            + f" - exponential cut-off broken power law\n"
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
             + f" - k: {self.k:.2e}\n"
             + f" - p1: {self.p1:.2f}\n"
             + f" - p2: {self.p2:.2f}\n"
@@ -759,6 +771,7 @@ class InterpolatedDistribution(ParticleDistribution):
         where we have :math:`\frac{d 10^{f(u(\gamma))}}{d\gamma} = \frac{d10^{f(u)}}{du} \cdot \frac{du(\gamma)}{d\gamma}`,
         where :math:`u` is the :math:`log_{10}(\gamma)`.
         This is equal to :math:`\frac{d 10^{f(u(\gamma))}}{d\gamma} =  10^{f(u)} \cdot \frac{df(u)}{du} \cdot \frac{1}{\gamma}`
+
         """
         log10_gamma = np.log10(gamma)
         df_log = self.log10_f.derivative()

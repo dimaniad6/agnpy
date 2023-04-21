@@ -35,7 +35,7 @@ import numba as nb
 
 '''
 
-__all__ = ['PhotoHadronicInteraction_log']
+__all__ = ['PhotoHadronicInteraction']
 
 mpc2 = (m_p * c ** 2).to('eV')
 mec2 = (m_e * c ** 2).to('eV')
@@ -164,25 +164,35 @@ def phi_gamma(eta, x, particle):
 
 
 def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
+    """
+    Parameters
+    -----------
+    gamma:float
+        Lorentz factor of protons
+
+    eta: float
+
+    gamma_limit: float
+        Lower limit of the integration, taken from the dimensionless energies or
+        the lorentz factors of the output particle
+    particle_distribution: function
+        proton distribution
+    soft_photon_dist: function
+        soft photon distribution (target photons)
+    particle: string
+        type of output particle
+
+    Returns: integrand of Eq70 Kelner2008
+    """
 
     return (1 / gamma ** 2  *
         particle_distribution(gamma).value *
         soft_photon_dist((eta /  (4*gamma))).value*
-        phi_gamma(eta, gamma_limit/gamma , particle))
-
-def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
-
-    u = 10**y
-    u_limit = 10**y_limit
-
-    return (1/ u**2 *
-        particle_distribution(u).value *
-        soft_photon_dist((eta /  (4*u))).value*
-        phi_gamma(eta, u_limit/u , particle)
-        * u * np.log(10))
+        phi_gamma(eta, gamma_limit/gamma , particle)
+    )
 
 
-class PhotoHadronicInteraction_log:
+class PhotoHadronicInteraction:
 
     def __init__(self, blob, soft_photon_distribution, integrator = np.trapz):
 
@@ -214,14 +224,30 @@ class PhotoHadronicInteraction_log:
 
             gamma_max = 1e15
             dNdE = []
-            gamma_range = [gamma_limit,gamma_max]
-            y_limit = np.log10(gamma_limit)
-            y_max = np.log10(gamma_max)
-            y_range = [y_limit,y_max]
+            a = gamma_limit
+            inv = 1e2
 
-            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_log,
-                                        [y_range, eta_range],
-                                        args=[y_limit,
+            while a * inv < gamma_max:
+
+                b = inv * a
+                gamma_range = [a,b]
+
+                dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
+                                        [gamma_range, eta_range],
+                                        args=[gamma_limit,
+                                        particle_distribution,
+                                        soft_photon_distribution,
+                                        particle]
+                                        )[0])
+                print ('finished this one')
+                b = inv * a
+                a = b
+
+            gamma_range = [a,gamma_max]
+
+            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
+                                        [gamma_range, eta_range],
+                                        args=[gamma_limit,
                                         particle_distribution,
                                         soft_photon_distribution,
                                         particle]
@@ -275,7 +301,7 @@ class PhotoHadronicInteraction_log:
             massa = mpc2.to('erg')
 
         sed_source_frame = (
-                PhotoHadronicInteraction_log.spectrum(
+                PhotoHadronicInteraction.spectrum(
                 epsilon, n_p, soft_photon_distribution,particle
                 ) * (vol / area) * (epsilon * massa) ** 2
         ).to("erg cm-2 s-1")

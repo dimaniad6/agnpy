@@ -6,7 +6,11 @@ from astropy.coordinates import Distance
 import pytest
 from pathlib import Path
 from agnpy.emission_regions import Blob
+<<<<<<< HEAD
 from agnpy.spectra import ExpCutoffPowerLaw, ExpCutoffBrokenPowerLaw
+=======
+from agnpy.spectra import ExpCutoffPowerLaw
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
 from agnpy.synchrotron import Synchrotron, nu_synch_peak
 from agnpy.synchrotron import ProtonSynchrotron
 from agnpy.utils.math import trapz_loglog
@@ -27,9 +31,15 @@ figures_dir = clean_and_make_dir(agnpy_dir, "crosschecks/figures/proton_synchrot
 # Define source parameters
 B = 10 * u.G
 redshift = 0.32
+<<<<<<< HEAD
 #distPKS = Distance(z=redshift) # Already inside blob definition
 doppler_s = 30
 #Gamma_bulk = 15 #21870 #15
+=======
+distPKS = Distance(z=redshift) # Already inside blob definition
+doppler_s = 30
+Gamma_bulk = 16
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
 R = 1e16 * u.cm #radius of the blob
 
 
@@ -41,10 +51,17 @@ class TestProtonSynchrotron:
         # reference SED
         lognu, lognuFnu = np.genfromtxt(f"{data_dir}/reference_seds/cerruti_psynch/test_pss.dat",  dtype = 'float', comments = '#', usecols = (0,4), unpack = True)
         nu_ref = 10**lognu * u.Unit('Hz')
+<<<<<<< HEAD
         sed_ref = 10**lognuFnu * u.Unit("erg cm-2 s-1")
 
         # agnpy
         n_p = ExpCutoffPowerLaw(k=12e4 / u.Unit('cm3'), #12e4 / u.Unit('cm3'), 13e4 *(2.5e+09)**(-2.2)
+=======
+        sed_ref = 10**lognuFnu *u.Unit("erg cm-2 s-1")
+
+        # agnpy
+        n_p = ExpCutoffPowerLaw(k=12e4 / u.Unit('cm3'), #12e3 / u.Unit('cm3'),
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
             p = 2.2 ,
             gamma_c= 2.5e9,
             gamma_min= 1,
@@ -55,12 +72,20 @@ class TestProtonSynchrotron:
         blob = Blob(R_b=R,
                 z=redshift,
                 delta_D=doppler_s,
+<<<<<<< HEAD
                 #Gamma=Gamma_bulk,
+=======
+                Gamma=Gamma_bulk,
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
                 B=B,
                 n_p=n_p
         )
 
+<<<<<<< HEAD
         psynch = ProtonSynchrotron(blob, ssa = True)
+=======
+        psynch = ProtonSynchrotron(blob)#, ssa = True)
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
         sed_agnpy = psynch.sed_flux(nu_ref)
 
         # sed comparison plot
@@ -72,18 +97,30 @@ class TestProtonSynchrotron:
             "agnpy",
             "Cerruti model",
             "Proton Synchrotron",
+<<<<<<< HEAD
             f"{figures_dir}/proton_synch_comparison_Cerruti.png",
+=======
+            f"{figures_dir}/proton_synch_comparison_PKS.png",
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
             "sed",
             # y_range=[1e-16, 1e-8],
             comparison_range=nu_range.to_value("Hz"),
         )
+<<<<<<< HEAD
         
+=======
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
         # requires that the SED points deviate less than 25% from the figure
         assert check_deviation(nu_ref, sed_agnpy, sed_ref, 0.25, nu_range)
 
 
     def test_sed_integration_methods(self):
+<<<<<<< HEAD
         """Test different integration methods against each other:
+=======
+        """
+        Test different integration methods against each other:
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
         simple trapezoidal rule vs trapezoidal rule in log-log space.
         """
         n_p = ExpCutoffPowerLaw(k=12e4 / u.Unit('cm3'), #12e3 / u.Unit('cm3'),
@@ -97,7 +134,11 @@ class TestProtonSynchrotron:
         blob = Blob(R_b=R,
                 z=redshift,
                 delta_D=doppler_s,
+<<<<<<< HEAD
                 #Gamma=Gamma_bulk,
+=======
+                Gamma=Gamma_bulk,
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
                 B=B,
                 n_p=n_p
         )

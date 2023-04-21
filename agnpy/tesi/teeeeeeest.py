@@ -5,8 +5,7 @@ from agnpy.utils.conversion import mpc2
 from agnpy.utils.plot import plot_sed
 from agnpy.emission_regions import Blob
 from agnpy.utils.plot import load_mpl_rc
-from synchrotron_new import Synchrotron
-from proton_synchrotron import ProtonSynchrotron
+from agnpy.synchrotron import Synchrotron, ProtonSynchrotron
 import matplotlib.pyplot as plt
 from astropy.constants import m_p,m_e, h
 from astropy.coordinates import Distance
@@ -15,64 +14,55 @@ load_mpl_rc()  # adopt agnpy plotting style
 #plt.style.use('proton_synchrotron')
 
 # Define source parameters PKS2155
-B = 80 * u.G
-redshift = 0.117
+B = 1 * u.G
+redshift = 0.1
 distPKS = Distance(z=redshift) # Already inside blob definition
 doppler_s = 30
 Gamma_bulk = 16
-R = 5.2e14 * u.cm #radius of the blob
+R = 1e16 * u.cm #radius of the blob
 vol = (4. / 3) * np.pi * R ** 3
 
 norm_p2 = 12e3 / u.Unit('cm3')
 u_p = 3.7e2 * u.Unit('erg cm-3')
 
 
-BPL_P= BrokenPowerLaw(k=12e3 * u.Unit("cm-3"),
-        p1=2.0,
-        p2=3.0,
-        gamma_min=1,
-        gamma_max=1e9,
+n_p = PowerLaw(k=3000 * u.Unit("cm-3"),
+        p=2.0,
+        gamma_min=1e4,
+        gamma_max=1e8,
         mass=m_p,
 )
 
-BPL_E = BrokenPowerLaw(k=12e3 * u.Unit("cm-3"),
-        p1=2.0,
-        p2=3.0,
-        gamma_min=1,
-        gamma_max=1e9,
+n_e = PowerLaw(k= 3000 * u.Unit("cm-3"),
+        p=2.0,
+        gamma_min=1e4,
+        gamma_max=1e8,
         mass=m_e,
 )
 
-
-# distributions:
-distributions = [BPL_E, BPL_P ]
-labels = ['electrons', 'protons']
-
 # compute the SED over an array of frequencies
-nu = np.logspace(10,30, 100) * u.Hz
+nu = np.logspace(6,30, 200) * u.Hz
 
-for i in distributions:
 
-    label = labels[distributions.index(i)]
-    blob = Blob(R_b=R,
-        z=redshift,
-        delta_D=doppler_s,
-        Gamma=Gamma_bulk,
-        B=B,
-        n_p= i
-    )
+blob = Blob(R_b=R,
+    z=redshift,
+    delta_D=doppler_s,
+    Gamma=Gamma_bulk,
+    B=B,
+    n_e = n_e,
+    n_p= n_p
+)
 
-    if label == 'electrons':
-        synch = Synchrotron(blob)
-    elif label == 'protons':
-        synch= ProtonSynchrotron(blob)
 
-    sed = synch.sed_flux(nu)
+synch = Synchrotron(blob)
+psynch= ProtonSynchrotron(blob, ssa = 'False')
 
-    #plt.loglog(nu, psed,  label = 'Proton Synctrotron')
+sed = synch.sed_flux(nu)
+psed=psynch.sed_flux(nu)
+plot_sed(nu,  sed, label = 'Electron Synchrotron',linestyle = '--')
+plot_sed(nu, psed,  label = 'Proton Synctrotron')
 
-    plot_sed(nu,  sed, label = label)
-    plt.ylim(1e-28, 1e-6)
-    plt.xlim(1e7, 1e30) # For frequencies
+plt.ylim(1e-28, 1e-6)
+plt.xlim(1e7, 1e30) # For frequencies
 
 plt.show()

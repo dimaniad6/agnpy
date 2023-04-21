@@ -8,9 +8,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 import re
-from agnpy.photomeson.photomeson2 import PhotoHadronicInteraction
+from agnpy.photomeson import PhotoHadronicInteraction
 from agnpy.spectra import ExpCutoffPowerLaw as ECPL
 from agnpy.emission_regions import Blob
+from ..utils.conversion import nu_to_epsilon_prime, B_to_cgs
+
+
+plt.style.use('proton_synchrotron')
+
+
+def epsilon_equivalency(nu, m = m_e):
+    if m == m_e:
+        epsilon_equivalency = h.to('eV s') * nu / mec2
+
+    elif m == m_p:
+        epsilon_equivalency = h.to('eV s')* nu / mpc2
+
+    return epsilon_equivalency
+
 
 def BlackBody(epsilon):
     T = 2.7 *u.K
@@ -37,8 +52,11 @@ mec2 = (m_e * c ** 2).to('eV')
 
 Ec = 3*1e20 * u.eV
 mpc2 = (m_p * c ** 2).to('eV')
+gamma_cut = Ec / mpc2
+p = 2.
+A = (0.24153*1e11)/(mpc2.value**2) * u.Unit('cm-3')
 
-p_dist = ECPL(0.265*1e11/mpc2.value**2 * u.Unit('cm-3'), 2., Ec/mpc2, 1e1, 1e13,  m_p)
+p_dist = ECPL(A, p, gamma_cut, 1e3, 1e20)
 
 blob = Blob(R_b=R,
         z=redshift,
@@ -48,22 +66,24 @@ blob = Blob(R_b=R,
         n_p= p_dist
 )
 
-nu = np.logspace(26,43,15)*u.Hz
-gamma = np.logspace(1,20,15)
+nu = np.logspace(25,37,50)*u.Hz
+gamma = epsilon_equivalency(nu)
+energies = gamma * mec2
+
+proton_gamma = PhotoHadronicInteraction(blob, BlackBody)
+spec = proton_gamma.spectrum(nu_aha, 'photon')
+# spec_ele = proton_gamma.spectrum(gammas, 'electron')
+# spec_posi = proton_gamma.spectrum_electron(gammas, 'positron')
+# spec_nu_muon = proton_gamma.spectrum(nu3, 'nu_muon')
+# spec_antinu_muon = proton_gamma.spectrum(nu, 'antinu_muon')
+# spec_nu_electron = proton_gamma.spectrum(nu, 'nu_electron')
 
 
-proton_gamma = PhotoHadronicInteraction(['photon','electron'], blob, BlackBody)
 
-# sed = proton_gamma.sed_flux(nu)
-# print ('sed2: .....')
-sed2= proton_gamma.sed_flux_particle(gamma, 'electron')
+sed = proton_gamma.sed_flux(nu, 'photon')
 
-#plt.loglog((nu), (sed * nu), lw=2.2, ls='-', color='orange',label = 'agnpy')
+plt.loglog((energies), (sed), lw=2.2, ls='-', color='blue',label = 'agnpy')
 
-energies = nu*h.to('eV s')
-energies2 = gamma*mec2
-plt.loglog(energies, sed)
-plt.loglog(energies2, sed2)
 plt.show()
 
 stop = timeit.default_timer()

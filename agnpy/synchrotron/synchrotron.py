@@ -52,7 +52,11 @@ def epsilon_B(B):
 
 
 def single_particle_synch_power(B_cgs, epsilon, gamma, mass=m_e):
+<<<<<<< HEAD
     """angle-averaged synchrotron power for a single electron,
+=======
+    """angle-averaged synchrotron power for a single particle of mass m_e,
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
     to be folded with the electron distribution
     """
     x = calc_x(B_cgs, epsilon, gamma, mass)
@@ -179,7 +183,11 @@ class Synchrotron:
         N_e = V_b * n_e.evaluate(_gamma, *args)
         # fold the electron distribution with the synchrotron power
         integrand = N_e * single_particle_synch_power(B_cgs, _epsilon, _gamma)
+<<<<<<< HEAD
         emissivity = integrator(integrand, gamma, axis=0)
+=======
+        emissivity = integrator(integrand, gamma, axis=0).reshape(epsilon.shape)
+>>>>>>> c3777f3170841b02c759e5f26ba3ba3574508de2
         prefactor = np.power(delta_D, 4) / (4 * np.pi * np.power(d_L, 2))
         sed = (prefactor * epsilon * emissivity).to("erg cm-2 s-1")
 

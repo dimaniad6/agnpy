@@ -8,13 +8,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 import re
-from agnpy.spectra import ExpCutoffPowerLaw as ECPL
-from agnpy.spectra import PowerLaw as PL
 # File with all available soft photon distributions:
 # to be used in the future to make the code faster:
-#import numba as nb
+<<<<<<< HEAD:agnpy/photomeson/kelner_log.py
+#from numba import jit
+=======
+import numba as nb
 
-def epsilon_equivalency(nu, m = m_e):
+def axes_reshaper(*args):
+    """reshape 1-dimensional arrays of different lengths in order for them to be
+    broadcastable in multi-dimensional operations
+
+    the rearrangement scheme for a list of n arrays is the following:
+    `args[0]` is reshaped as `(args[0].size, 1, 1, ..., 1)` -> axis 0
+    `args[1]` is reshaped as `(1, args[1].size, 1, ..., 1)` -> axis 1
+    `args[2]` is reshaped as `(1, 1, args[2].size ..., 1)` -> axis 2
+        .
+        .
+        .
+    `args[n-1]` is reshaped as `(1, 1, 1, ..., args[n-1].size)` -> axis n-1
+    Parameters
+    ----------
+    args: 1-dimensional `~numpy.ndarray`s to be reshaped
+    """
+    n = len(args)
+    dim = (1,) * n
+    reshaped_arrays = []
+    for i, arg in enumerate(args):
+        reshaped_dim = list(dim)  # the tuple is copied in the list
+        reshaped_dim[i] = arg.size
+        reshaped_array = np.reshape(arg, reshaped_dim)
+        reshaped_arrays.append(reshaped_array)
+    return reshaped_arrays
+>>>>>>> 2626d22bb6c0cea7c9f95ddc1685745ae9a9b310:agnpy/photomeson/scripts/integration_attempts/np_trapz_integration.py
+
+def epsilon_equivalency(nu, m = m_e): #used in the main only
     if m == m_e:
         epsilon_equivalency = h.to('eV s') * nu / mec2
 
@@ -35,7 +63,7 @@ def epsilon_equivalency(nu, m = m_e):
 
 '''
 
-__all__ = ['PhotoHadronicInteraction_Reference3']
+__all__ = ['PhotoHadronicInteraction_Reference']
 
 mpc2 = (m_p * c ** 2).to('eV')
 mec2 = (m_e * c ** 2).to('eV')
@@ -128,20 +156,48 @@ def phi_gamma(eta, x, particle):
 
 
 def H_integrand(gamma, eta, gamma_limit, particle_distribution, soft_photon_dist, particle):
-
     return (1 / gamma ** 2  *
         particle_distribution(gamma).value *
         soft_photon_dist((eta /  (4*gamma))).value*
         phi_gamma(eta, gamma_limit/gamma , particle)
     )
 
+<<<<<<< HEAD:agnpy/photomeson/kelner_log.py
+def H_log(y, eta, y_limit, particle_distribution, soft_photon_dist, particle):
 
-class PhotoHadronicInteraction_Reference3:
+    u = 10**y
+    u_limit = 10**y_limit
+
+    return (1/ u *
+        particle_distribution(u).value *
+        soft_photon_dist((eta /  (4*u))).value*
+        phi_gamma(eta, u_limit/u , particle)
+        * np.log(10))
+
+
+
+
+
+#@jit(nopython=False)
+def integrate(H_log,y_range, eta_range, y_limit, particle_distribution, soft_photon_distribution,particle):
+    return ((1 / 4) * (mpc2.value) *  nquad(H_log,
+                                [y_range, eta_range],
+                                args=[y_limit,
+                                particle_distribution,
+                                soft_photon_distribution,
+                                particle]
+                                )[0])
+
+=======
+>>>>>>> 2626d22bb6c0cea7c9f95ddc1685745ae9a9b310:agnpy/photomeson/scripts/integration_attempts/np_trapz_integration.py
+
+class PhotoHadronicInteraction_Reference:
 
     def __init__(self, particle_distribution, soft_photon_distribution):
 
         self.particle_distribution = particle_distribution
         self.soft_photon_distribution = soft_photon_distribution
+
 
     @staticmethod
     def spectrum_calculator(
@@ -155,50 +211,44 @@ class PhotoHadronicInteraction_Reference3:
 
         for i, g in enumerate(output_spec):
 
-            if particle in ('electron', 'positron'):
+            if particle in ('electron','positron'):
                 gamma_limit = g * (mec2/mpc2)
+                gamma = np.logspace(np.log10(gamma_limit.value), 14, 75)
             else:
                 gamma_limit = g
+                gamma = np.logspace(np.log10(gamma_limit.value), 14, 75)
 
             if particle in ('electron', 'antinu_electron'):
-                eta_range = [0.945, 31.3]
+                eta = np.linspace(0.945,31.3,75)
             else:
-                eta_range = [0.3443, 31.3]
+                eta = np.linspace(0.3443,31.3,75)
 
-            gamma_max = 1e15
-            dNdE = []
-            a = gamma_limit
-            inv = 1e2
+            #_gamma, _eta = axes_reshaper(gamma,eta)
 
-            while a * inv < gamma_max:
-                
-                b = inv * a
-                gamma_range = [a,b]
+            H_int = np.zeros(len(eta))
 
-                dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
-                                            [gamma_range, eta_range],
-                                            args=[gamma_limit,
-                                            particle_distribution,
-                                            soft_photon_distribution,
-                                            particle]
-                                            )[0])
-                b = inv * a
-                a = b
+            #print ('gamma_limit: ', gamma_limit)
+            #print ('len eta: ', len(eta))
+            #print ('len_gamma: ', len(gamma))
+            #print ('gamma: ',gamma)
+            #print ('eta: ',eta)
+            H = np.zeros(len(gamma))
 
-            gamma_range = [a,gamma_max]
-            # print (gamma_range)
-            dNdE.append((1 / 4) * (mpc2.value) *  nquad(H_integrand,
-                                        [gamma_range, eta_range],
-                                        args=[gamma_limit,
-                                        particle_distribution,
-                                        soft_photon_distribution,
-                                        particle]
-                                        )[0])
+            for j in range(1,len(gamma)):
 
+                for k in range(1,len(eta)):
+                    H_int[k] = (H_integrand(float(gamma[j]),eta[k],gamma_limit # H[η1, γ], H[η2, γ], ...
+                                    ,particle_distribution,soft_photon_distribution,particle))
+                    # print ('k is: ', k)
+                    # if H_int[k] > 0:
+                    #     print ('integral is: ', H_int[k])
 
+                H[j] = (1 / 4) * (mpc2.value) * np.trapz(H_int, gamma)
 
-            spectrum_array[i] = sum(dNdE)
+            dNdE = np.trapz(H, eta, axis=0) #dN/dE = dN/dE (γ), γ taken from the output particle array
 
+            spectrum_array[i] = dNdE
+            print ('SPECTRUM IS: ', dNdE)
             print ("Computing {} spectrum: {}% is completed..."
                 .format(particle ,int(100*(i+1) / len(output_spec))))
 
@@ -216,7 +266,7 @@ class PhotoHadronicInteraction_Reference3:
         if particle not in ('electron', 'positron'):
             input = epsilon_equivalency(input, m = m_p)
 
-        spectrum = PhotoHadronicInteraction_Reference3.spectrum_calculator(
+        spectrum = PhotoHadronicInteraction_Reference.spectrum_calculator(
                 input , particle_distribution, soft_photon_distribution, particle
                 )
 
@@ -224,27 +274,17 @@ class PhotoHadronicInteraction_Reference3:
 
     def spectrum(self, input, particle):
         return self.evaluate_spectrum(
-            input,
+            input, #array of freq
             self.particle_distribution,
             self.soft_photon_distribution,
             particle
         )
 
+
 if __name__ == '__main__':
+    from agnpy.spectra import ExpCutoffPowerLaw as ECPL
 
-    E, EdNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure15/2photon.txt",
-                        dtype = 'float', comments = '#', usecols = (0,1), delimiter=",",unpack = True)
-    # E2, E2dNdE = np.genfromtxt("/home/dimitris/Desktop/agnpy/agnpy/agnpy/data/reference_seds/Kelner_Aharonian_2008/Figure15/electron.txt",
-    #                     dtype = 'float', comments = '#', usecols = (0,1), delimiter=",",unpack = True)
-
-    # E = E[0],E[3],E[7],E[11],E[14]
-    # EdNdE =EdNdE[0],EdNdE[3],EdNdE[7],EdNdE[11],EdNdE[14]
-    # E2  = E2[0],E2[3],E2[7],E2[11], E2[14]
-    # E2dNdE = E2dNdE[0],E2dNdE[3],E2dNdE[7],E2dNdE[11], E2dNdE[14]
-
-    nu_aha = E*u.eV / h.to('eV s')
-    # nu_aha2= E2*u.eV/ h.to('eV s')
-
+    # SoftPhotonDistribution
     def BlackBody(gamma):
         T = 2.7 *u.K
         kT = (k_B * T).to('eV').value
@@ -255,56 +295,45 @@ if __name__ == '__main__':
         denom = np.exp(mpc2.value * gamma / kT) - 1
         return norm * (num / denom)*u.Unit('cm-3')
 
+    start = timeit.default_timer()
 
     # EXAMPLE AHARONIAN:
 
-    # Proton distribution: ExpCutoffPowerLaw with Ec = 0.1, 1 * E_star, Figures 14,15,16
+    # Proton distribution: ExpCutoffPowerLaw with Ec = 0.1, 1 * E_star, Figures 14,15
     # Soft photon distribution: CMB
     mpc2 = (m_p * c ** 2).to('eV')
-    nu = np.logspace(23,37,100)*u.Hz
-
-    # gammas = epsilon_equivalency(nu_aha2, m = m_e)
+    nu = np.logspace(30,36,25)*u.Hz
+    gammas = epsilon_equivalency(nu, m = m_p)
     ene = nu * h.to('eV s')
-
-    A1 = (0.26506*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    A2 = (0.24153*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    A3 = (0.22170*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-    A4 = (0.19054*1e11)/(mpc2.value**2) * u.Unit('cm-3')
-
+    print (gammas)
+    A = (0.24153*1e11)/(mpc2.value**2) * u.Unit('cm-3')
     p = 2.
-
     E_star = 3*1e20 * u.eV
     E_cut = 1 * E_star
-
     gamma_cut = E_cut / mpc2
 
-    p_dist = ECPL(A2, p, gamma_cut, 1, 1e20)
-    #p_dist = PL(A, p ,1, 1e19)
-    proton_gamma = PhotoHadronicInteraction_Reference3(p_dist, BlackBody)
+    p_dist = ECPL(A, p, gamma_cut, 1e3, 1e13)
 
-    spec = proton_gamma.spectrum(nu_aha, 'photon')
-    # spec_ele = proton_gamma.spectrum(gammas, 'electron')
+    proton_gamma = PhotoHadronicInteraction_Reference(p_dist, BlackBody)
 
+
+    # spec_ele = proton_gamma.spectrum(gamma2, 'electron')
+    spec = proton_gamma.spectrum(nu, 'photon')
     # spec_posi = proton_gamma.spectrum_electron(gammas, 'positron')
     # spec_nu_muon = proton_gamma.spectrum(nu3, 'nu_muon')
     # spec_antinu_muon = proton_gamma.spectrum(nu, 'antinu_muon')
     # spec_nu_electron = proton_gamma.spectrum(nu, 'nu_electron')
 
     #
-    plt.loglog((E), (spec * E ), color='orange')
-    plt.loglog((E), (EdNdE), '.')
-    # plt.loglog((E2), (spec_ele * E2 ), color='blue')
-    # plt.loglog((E2), (E2dNdE), '.')
-
+    plt.loglog((ene), (spec * ene ), color='orange',label = 'photons')
+    # plt.loglog((E2), (spec_ele * E2 ), '.', color='blue',label = 'electrons')
+    # plt.loglog((ene), (spec_posi * ene ), lw=2.2, ls='-', color='red',label = 'positrons')
     # plt.loglog((E3), (spec_nu_muon * E3), lw=2.2, ls='-', color='red',label = 'spec_nu_muon')
     # plt.loglog((ene), (spec_antinu_muon * ene ), lw=2.2, ls='-', color='blue',label = 'spec_antinu_muon')
     # plt.loglog((ene), (spec_nu_electron * ene ), lw=2.2, ls='-', color='green',label = 'spec_nu_electron')
 
-
-    stop = timeit.default_timer()
-
-    # plt.legend()
+    plt.legend()
     plt.show()
 
-
+    stop = timeit.default_timer()
     print("Elapsed time for computation = {} secs".format(stop - start))
