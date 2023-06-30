@@ -8,8 +8,8 @@ from astropy.coordinates import Distance
 from astropy.cosmology import default_cosmology, FlatLambdaCDM, Planck15
 
 from agnpy.spectra import ExpCutoffBrokenPowerLaw
-#from agnpy.emission_regions import Blob
-from blob_cosmo import Blob
+from agnpy.emission_regions import Blob
+#from blob_cosmo import Blob
 from agnpy.synchrotron import ProtonSynchrotron
 from utils_pytes import make_comparison_plot
 from agnpy.utils.plot import load_mpl_rc
@@ -32,7 +32,7 @@ dL1a = Distance(z=z1)
 dL2a = Distance(z=z2)
 
 # Compute luminosity distance with M. Cerruti cosmology (for now I just change the Hubble constant)
-cosmo_cerruti = FlatLambdaCDM(H0 = 70 * u.km / u.s / u.Mpc, Om0 = 0.307, Tcmb0=2.725 * u.K, Neff=3.05, m_nu=[0., 0., 0.06] * u.eV, Ob0=0.0486)
+cosmo_cerruti = FlatLambdaCDM(H0 = 68 * u.km / u.s / u.Mpc, Om0 = 0.307, Tcmb0=2.725 * u.K, Neff=3.05, m_nu=[0., 0., 0.06] * u.eV, Ob0=0.0486)
 dL1c = Distance(z=z1, cosmology=cosmo_cerruti)
 dL2c = Distance(z=z2, cosmology=cosmo_cerruti)
 
@@ -73,14 +73,12 @@ n_p2 = ExpCutoffBrokenPowerLaw(k=12e4*(2.5e+09)**(-2.2) / u.Unit('cm3'),
             gamma_max=1e20,
             mass=m_p
         )
-#n2 = n_p2(gamma2)
 blob2 = Blob(R_b=R1,
         z=redshift1,
         delta_D=doppler_s1,
         B=B1,
         n_p=n_p2
         )   
-
 # print(blob2.d_L, '   ', blob2.d_L.to('Mpc'))
 # print(dL1c.to('cm'), '   ', dL1c)
 psynch2 = ProtonSynchrotron(blob2, ssa = True)
@@ -90,16 +88,86 @@ dL_ratio = (dL1a ** 2) / (dL1c ** 2)
 psedc_rescaled = dL_ratio * psed2
 print(dL_ratio)
 
-# sed comparison plot
+# sed comparison plot, agnpy vs Cerruti data
+nu_range = [1e10, 1e28] * u.Hz
+make_comparison_plot(
+        nu_data2,
+        psed2,
+        nuFnu_data2,
+        "agnpy rescaled with dL ratio",
+        "Cerruti",
+        "Proton synchrotron from ExpCutoffBrokenPowerLaw",
+        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures2/agnpy_vs_cerruti_psync.png",
+        "sed",
+        # y_range=[1e-16, 1e-8],
+        comparison_range=nu_range.to_value("Hz"),
+)
+
+# sed comparison plot, agnpy rescaled with dL ratio vs Cerruti data
 nu_range = [1e10, 1e28] * u.Hz
 make_comparison_plot(
         nu_data2,
         psedc_rescaled,
         nuFnu_data2,
-        "Cerruti, rescaled",
+        "agnpy rescaled with dL ratio",
         "Cerruti",
         "Proton synchrotron from ExpCutoffBrokenPowerLaw",
-        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures/agnpy_vs_cerruti_psync_cosmology_H070_Om03.png",
+        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures2/agnpy-rescaled_vs_cerruti_psync.png",
+        "sed",
+        # y_range=[1e-16, 1e-8],
+        comparison_range=nu_range.to_value("Hz"),
+)
+
+
+# Blob with dL from M. Cerruti (assuming cosmology cosmo_cerruti)
+#n2 = n_p2(gamma2)
+blob3 = Blob(R_b=R1,
+        z=redshift1,
+        d_L = dL1c,
+        delta_D=doppler_s1,
+        B=B1,
+        n_p=n_p2
+        )  
+psynch3 = ProtonSynchrotron(blob3, ssa = True)
+psed3 = psynch3.sed_flux(nu_data2)
+# sed comparison plot: cerruti vs agnpy with Cerruti dL
+nu_range = [1e10, 1e28] * u.Hz
+make_comparison_plot(
+        nu_data2,
+        psed3,
+        nuFnu_data2,
+        "agnpy computed with Cerruti's dL",
+        "Cerruti",
+        "Proton synchrotron from ExpCutoffBrokenPowerLaw",
+        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures2/agnpy-w-cerruti-dL_vs_cerruti_psync.png",
+        "sed",
+        # y_range=[1e-16, 1e-8],
+        comparison_range=nu_range.to_value("Hz"),
+)
+
+# Check difference between agnpy rescaled plot and agnpy computed with Cerruti's dL plot
+make_comparison_plot(
+        nu_data2,
+        psed3,
+        psedc_rescaled,
+        "agnpy computed with Cerruti's dL",
+        "agnpy rescaled with dL ratio",
+        "Proton synchrotron from ExpCutoffBrokenPowerLaw",
+        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures2/agnpy-rescaled_vs_agnpy-w-cerruti-dL.png",
+        "sed",
+        # y_range=[1e-16, 1e-8],
+        comparison_range=nu_range.to_value("Hz"),
+)
+
+# Check difference between agnpy plot and agnpy computed with Cerruti's dL plot
+make_comparison_plot(
+        nu_data2,
+        psed3,
+        psed2,
+        "agnpy computed with Cerruti's dL",
+        "agnpy",
+        "Proton synchrotron from ExpCutoffBrokenPowerLaw",
+        f"{agnpy_dir}/agnpy/tesi/comparison_sync_cerruti/figures2/agnpy_vs_agnpy-w-cerruti-dL.png",
         "sed",
         # y_range=[1e-16, 1e-8],
         comparison_range=nu_range.to_value("Hz"),
