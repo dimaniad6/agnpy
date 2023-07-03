@@ -10,6 +10,8 @@ nu_to_integrate = np.logspace(5, 30, 200) * u.Hz  # used for SSC
 mu_to_integrate = np.linspace(-1, 1, 100)
 phi_to_integrate = np.linspace(0, 2 * np.pi, 50)
 
+eta_range = np.linspace(0.9443,31.3,100)
+
 # minimum relative distance to the absorber (to avoid infinite integrals)
 min_rel_distance = 1.0e-4
 
