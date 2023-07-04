@@ -82,46 +82,6 @@ class KelnerAharonian2008:
         output_spec = gammas #it is either gammas for electrons, positrons or epsilon for photons, neutrinos
         spectrum_array = np.zeros(len(output_spec))
 
-        for i, g in enumerate(output_spec):
-
-            # different integration limit for leptons vs photons/nu, because of the way the gammas or epsilons are defined (different mass)
-            if particle in ('electron','positron'):
-                gamma_limit = g * (mec2/mpc2)
-            else:
-                gamma_limit = g
-
-            if particle in ('electron', 'antinu_electron'):
-                eta_range = [0.945, 31.3]
-            else:
-                eta_range = [0.3443, 31.3]
-
-            gamma_max = 1e15
-            dNdE = []
-            gamma_range = [gamma_limit,gamma_max]
-            # integration is in log space, so we use y
-            y_limit = np.log10(gamma_limit)
-            y_max = np.log10(gamma_max)
-            y_range = [y_limit,y_max]
-
-            # 2D integration using scipy: over eta and over y
-            dNdE = ((1 / 4) * (mpc2.value) *  nquad(H_log,
-                                        [y_range, eta_range],
-                                        args=[y_limit,
-                                        particle_distribution,
-                                        soft_photon_distribution,
-                                        particle]
-                                        )[0])
-
-
-            spectrum_array[i] = dNdE
-
-            print (spectrum_array[i])
-            print ("Computing {} spectrum: {}% is completed..."
-                .format(particle ,int(100*(i+1) / len(output_spec))))
-
-        return (spectrum_array * u.Unit('eV-1 cm-3 s-1')).to('erg-1 cm-3 s-1')
-
-
     @staticmethod
     def evaluate_sed_flux_photons(
         nu, # freq of photons, for the other particles it is gamma
@@ -138,35 +98,25 @@ class KelnerAharonian2008:
     ):
         
         epsilon = nu_to_epsilon_prime(nu, 0., delta_D, m = m_p) # dimensionless energy of the produced photons
-        y = np.log10(epsilon)
-        u = 10**y
-        u_limit = 10**y_limit
-
-        # Reshape u, eta
-        _u, _eta = axes_reshaper(u, eta)
-
-        H_integrand = 1/ _u**2 * n_p(_u).value * \
-        soft_photon_dist((_eta /  (4*_u))).value * \
-        phi_photon(_eta, u_limit/_u) * _u * np.log(10) # the term u * np.log(10) comes from the differential of 
-
-        H = (1 / 4) * (mpc2.value) * integrator(H_integrand, _u, axis=0)
-
-        dNdE = integrator(H, _eta, axis=0)
-
-        u = 10**y
-        u_limit = 10**y_limit
+        spectrum_array = np.zeros(len(epsilon))
+        w = np.log10(epsilon)
         
-        for i, g in enumerate(nu):
+        for i, g in enumerate(w):
 
-            gamma_limit = g
+            y_p_limit = g # y_p = log10(gamma_p)
+            y_p_max = 15 # Poi proviamo valori più alti
+            y = np.logspace(g,15,100)
 
-            gamma_max = 1e15
+            # Reshape y, eta
+            _y, _eta = axes_reshaper(y, eta)
 
-            gamma_range = [gamma_limit,gamma_max]
-            # integration is in log space, so we use y
-            y_limit = np.log10(gamma_limit)
-            y_max = np.log10(gamma_max)
-            y_range = [y_limit,y_max]
+            H_integrand = 1/ (10**_y)**2 * n_p(10**_y).value * \
+                soft_photon_dist((_eta /  (4*10**_y))).value * \
+                phi_photon(_eta, 10**y_limit/10**_y) * 10**_y * np.log(10) # the term u * np.log(10) comes from the differential of 
+
+            H = (1 / 4) * (mpc2.value) * integrator(H_integrand, 10**_y, axis=0)
+
+            dNdE = integrator(H, _eta, axis=0)
 
 
 
